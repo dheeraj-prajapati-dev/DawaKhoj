@@ -15,7 +15,7 @@ exports.prescriptionToPharmacy = async (req, res) => {
       });
     }
 
-    // 1️⃣ Upload
+    // 1️⃣ Upload to cloudinary
     const uploadRes = await cloudinary.uploader.upload(req.file.path, {
       folder: 'prescriptions'
     });
@@ -25,6 +25,7 @@ exports.prescriptionToPharmacy = async (req, res) => {
 
     // 3️⃣ Detect medicines
     const detectedMedicines = normalizeMedicines(extractedText);
+    console.log('🧪 detectedMedicines:', detectedMedicines);
 
     if (!detectedMedicines.length) {
       return res.json({
@@ -35,50 +36,57 @@ exports.prescriptionToPharmacy = async (req, res) => {
       });
     }
 
+    // 4️⃣ Find nearby pharmacies
+    const nearbyPharmacies = await Pharmacy.find({
+      isVerified: true,
+      location: {
+        $near: {
+          $geometry: {
+            type: 'Point',
+            coordinates: [Number(lng), Number(lat)]
+          },
+          $maxDistance: 5000
+        }
+      }
+    }).select('_id storeName phone homeDelivery open24x7 location');
+
+    if (!nearbyPharmacies.length) {
+      return res.json({
+        success: true,
+        imageUrl: uploadRes.secure_url,
+        extractedText,
+        results: detectedMedicines.map(m => ({
+          requestedMedicine: m,
+          options: []
+        }))
+      });
+    }
+
+    const pharmacyIds = nearbyPharmacies.map(p => p._id);
     const results = [];
 
+    // 5️⃣ Loop medicines
     for (const med of detectedMedicines) {
+      console.log('🧪 checking medicine:', med);
 
-      // ✅ Step A: find pharmacies nearby FIRST
-      const nearbyPharmacies = await Pharmacy.find({
-        isVerified: true,
-        location: {
-          $near: {
-            $geometry: {
-              type: 'Point',
-              coordinates: [Number(lng), Number(lat)]
-            },
-            $maxDistance: 5000
-          }
-        }
-      }).select('_id storeName address phone homeDelivery open24x7 location');
-
-      if (!nearbyPharmacies.length) {
-        results.push({ requestedMedicine: med, options: [] });
-        continue;
-      }
-
-      const pharmacyIds = nearbyPharmacies.map(p => p._id);
-
-      // ✅ Step B: inventory lookup
       const inventories = await Inventory.find({
-        stock: { $gt: 0 },
-        pharmacy: { $in: pharmacyIds }
+        pharmacy: { $in: pharmacyIds },
+        stock: { $gt: 0 }
       })
         .populate({
           path: 'medicine',
           match: {
-            $or: [
-              { name: new RegExp(med, 'i') },
-              { salt: new RegExp(med, 'i') }
-            ]
+            // 🔥 ONLY SALT MATCH (FINAL FIX)
+            salt: new RegExp(med.salt, 'i')
           }
         })
         .populate({
           path: 'pharmacy',
-          select: 'storeName address phone homeDelivery open24x7 location'
+          select: 'storeName phone homeDelivery open24x7 location'
         })
         .sort({ price: 1 });
+
+      console.log('🧪 inventories length:', inventories.length);
 
       const options = inventories
         .filter(i => i.medicine && i.pharmacy)
@@ -87,12 +95,7 @@ exports.prescriptionToPharmacy = async (req, res) => {
           phone: i.pharmacy.phone,
           price: i.price,
           stock: i.stock,
-          homeDelivery: i.pharmacy.homeDelivery,
-          distance: Math.round(
-            (i.pharmacy.location.coordinates
-              ? 0 // optional calc later
-              : 0)
-          )
+          homeDelivery: i.pharmacy.homeDelivery
         }));
 
       results.push({
@@ -100,6 +103,8 @@ exports.prescriptionToPharmacy = async (req, res) => {
         options
       });
     }
+
+    console.log('🧪 FINAL RESULTS:', results);
 
     return res.json({
       success: true,
@@ -110,7 +115,7 @@ exports.prescriptionToPharmacy = async (req, res) => {
 
   } catch (err) {
     console.error('❌ Prescription flow error:', err);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Prescription flow failed'
     });

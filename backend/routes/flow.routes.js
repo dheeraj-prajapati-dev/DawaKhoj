@@ -1,20 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const { parseMedicines } = require("../utils/medicineParser");
 
-const medicines = parseMedicines(extractedText);
+const upload = require('../middlewares/upload.middleware');
+const { prescriptionToPharmacy } = require('../controllers/flow.controller');
 
-console.log("🧠 Parsed Medicines:", medicines);
-
-
-
-const flowController = require('../controllers/flow.controller');
-const upload = require('../middleware/upload.middleware');
-
+// ✅ ONLY route definition
 router.post(
   '/prescription-search',
   upload.single('image'),
-  flowController.prescriptionToPharmacy
+  prescriptionToPharmacy
 );
 
 module.exports = router;

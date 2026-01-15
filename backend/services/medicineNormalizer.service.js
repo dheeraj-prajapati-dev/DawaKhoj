@@ -1,8 +1,9 @@
 const medicineMaster = require('../utils/medicineMaster');
 
 exports.normalizeMedicines = (text) => {
-  const lowerText = text.toLowerCase();
+  if (!text) return [];
 
+  const lowerText = text.toLowerCase();
   const found = [];
 
   medicineMaster.forEach(med => {

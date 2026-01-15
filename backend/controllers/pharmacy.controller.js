@@ -138,3 +138,30 @@ exports.getNearestPharmacies = async (req, res) => {
   }
 };
 
+
+exports.getMyProfile = async (req, res) => {
+  try {
+    const pharmacy = await Pharmacy.findOne({ owner: req.user._id });
+
+    if (!pharmacy) {
+      return res.status(404).json({
+        success: false,
+        message: 'Pharmacy not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      pharmacy,
+      isVerified: req.user.isVerified
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
+
+
+
+

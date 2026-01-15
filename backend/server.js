@@ -46,6 +46,7 @@ const inventoryRoutes = require('./routes/inventory.routes');
 
 app.use('/api/inventory', inventoryRoutes);
 
+
 // ===== SEARCH ROUTE ======
 const searchRoutes = require('./routes/search.routes');
 
@@ -64,7 +65,7 @@ app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
 });
 
-const { protect, authorizeRoles } = require('./middleware/auth.middleware');
+const { protect, authorizeRoles } = require('./middlewares/authMiddleware');
 
 app.get('/api/admin-test', protect, authorizeRoles('admin'), (req, res) => {
   res.json({

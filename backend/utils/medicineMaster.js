@@ -4,15 +4,11 @@ module.exports = [
     salt: "paracetamol"
   },
   {
-    brand: "calpol",
-    salt: "paracetamol"
-  },
-  {
     brand: "crocin",
     salt: "paracetamol"
   },
   {
-    brand: "brufen",
-    salt: "ibuprofen"
+    brand: "calpol",
+    salt: "paracetamol"
   }
 ];

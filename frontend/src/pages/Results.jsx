@@ -15,7 +15,7 @@ export default function Results() {
 
   const { results, extractedText, imageUrl } = state;
 
-  console.log("RESULTS DATA 👉", results);
+  console.log("🧪 FRONTEND RESULTS:", results);
 
   return (
     <div className="min-h-screen bg-gray-100 py-6 px-4">
@@ -35,7 +35,7 @@ export default function Results() {
         <h2 className="font-semibold mb-4">Detected Prescription</h2>
 
         <div className="flex flex-col md:flex-row gap-6">
-           {imageUrl && (
+          {imageUrl && (
             <div
               className="shrink-0 border rounded-lg bg-gray-50 flex items-center justify-center"
               style={{ width: 260, height: 360 }}
@@ -57,14 +57,16 @@ export default function Results() {
       {/* Medicine Results */}
       <div className="max-w-5xl mx-auto space-y-6">
         {results.map((item, idx) => {
-          const minPrice = Math.min(
-            ...item.options.map(o => o.price)
-          );
+          const minPrice =
+            item.options.length > 0
+              ? Math.min(...item.options.map(o => o.price))
+              : null;
 
           return (
             <div key={idx} className="bg-white rounded-xl shadow p-4">
               <h3 className="text-lg font-semibold mb-3">
-                {item.requested}
+                {item.requestedMedicine.brand.toUpperCase()} (
+                {item.requestedMedicine.salt})
               </h3>
 
               {item.options.length === 0 ? (
