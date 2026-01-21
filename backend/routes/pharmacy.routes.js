@@ -6,15 +6,16 @@ const {
   approvePharmacy,
   getVerifiedPharmacies,
   getNearestPharmacies,
+  getUnverifiedPharmacies,
   getMyProfile
 } = require('../controllers/pharmacy.controller');
 
-const { getMyPharmacy } = require('../controllers/pharmacy.controller');
+
 
 const { protect, authorizeRoles } = require('../middlewares/authMiddleware');
 
 // 🏥 Register pharmacy
-router.post('/register', protect, registerPharmacy);
+router.post('/register', protect, authorizeRoles('pharmacy'), registerPharmacy);
 
 // 👑 Admin approve pharmacy
 router.put(
@@ -35,6 +36,15 @@ router.get(
   protect,
   authorizeRoles('pharmacy'),
   getMyProfile
+);
+
+
+// 👑 Admin: get unverified pharmacies
+router.get(
+  '/unverified',
+  protect,
+  authorizeRoles('admin'),
+  getUnverifiedPharmacies
 );
 
 

@@ -1,6 +1,6 @@
 import InventoryRow from './InventoryRow';
 
-export default function InventoryTable({ inventory, refresh }) {
+export default function InventoryTable({ inventory, refresh, isVerified }) {
   return (
     <table border="1" cellPadding="10" width="100%">
       <thead>
@@ -19,6 +19,7 @@ export default function InventoryTable({ inventory, refresh }) {
             key={item._id}
             item={item}
             refresh={refresh}
+            isVerified={isVerified}
           />
         ))}
       </tbody>

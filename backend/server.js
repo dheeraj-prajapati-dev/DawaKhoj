@@ -90,3 +90,7 @@ app.use('/api/prescription', prescriptionRoutes);
 // ==== END-TO-END FLOW (PRESCRIPTION → PHARMACY → PRICE) ====
 const flowRoutes = require('./routes/flow.routes');
 app.use('/api/flow', flowRoutes);
+
+
+app.use('/api/admin', require('./routes/admin.routes'));
+

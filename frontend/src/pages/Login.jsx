@@ -16,12 +16,14 @@ export default function Login() {
         { email, password }
       );
 
-      // 🔥🔥 THIS IS THE KEY 🔥🔥
+      // ✅ SAVE AUTH DATA
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(res.data.user));
 
-      // pharmacy user → inventory page
-      if (res.data.user.role === 'pharmacy') {
+      // ✅ ROLE BASED REDIRECT (🔥 IMPORTANT)
+      if (res.data.user.role === 'admin') {
+        navigate('/admin/dashboard');
+      } else if (res.data.user.role === 'pharmacy') {
         navigate('/pharmacy/inventory');
       } else {
         navigate('/');
@@ -34,8 +36,19 @@ export default function Login() {
 
   return (
     <form onSubmit={handleSubmit}>
-      <input value={email} onChange={e => setEmail(e.target.value)} />
-      <input type="password" value={password} onChange={e => setPassword(e.target.value)} />
+      <input
+        placeholder="Email"
+        value={email}
+        onChange={e => setEmail(e.target.value)}
+      />
+
+      <input
+        type="password"
+        placeholder="Password"
+        value={password}
+        onChange={e => setPassword(e.target.value)}
+      />
+
       <button type="submit">Login</button>
     </form>
   );

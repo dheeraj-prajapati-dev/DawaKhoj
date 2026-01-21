@@ -7,7 +7,7 @@ export const useInventory = () => {
 
   const fetchInventory = async () => {
     try {
-      const res = await getMyInventory();   // ✅ MISSING LINE
+      const res = await getMyInventory();   
       setInventory(res.data.inventory);
     } catch (error) {
       console.error('❌ Inventory fetch error:', error);

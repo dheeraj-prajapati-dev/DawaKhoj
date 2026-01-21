@@ -153,12 +153,31 @@ exports.getMyProfile = async (req, res) => {
     res.json({
       success: true,
       pharmacy,
-      isVerified: req.user.isVerified
+      isVerified: pharmacy.isVerified
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
+
+
+// 👑 ADMIN: GET UNVERIFIED PHARMACIES
+exports.getUnverifiedPharmacies = async (req, res) => {
+  try {
+    const pharmacies = await Pharmacy.find({ isVerified: false })
+      .populate('owner', 'name email phone')
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      count: pharmacies.length,
+      pharmacies
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 
 
 

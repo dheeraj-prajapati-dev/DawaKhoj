@@ -24,7 +24,6 @@ router.get(
   '/my',
   protect,
   authorizeRoles('pharmacy'),
-  requireVerifiedPharmacy,
   getMyInventory
 );
 
