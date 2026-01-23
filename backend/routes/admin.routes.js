@@ -1,20 +1,23 @@
 const express = require('express');
 const router = express.Router();
+
 const { protect, authorizeRoles } = require('../middlewares/authMiddleware');
 const {
-  getUnverifiedPharmacies,
+  getAllPharmacies,
   approvePharmacy
-} = require('../controllers/pharmacy.controller');
+} = require('../controllers/admin.controller');
 
+// ✅ GET ALL PHARMACIES
 router.get(
   '/pharmacies',
   protect,
   authorizeRoles('admin'),
-  getUnverifiedPharmacies
+  getAllPharmacies
 );
 
+// ✅ APPROVE PHARMACY
 router.put(
-  '/pharmacy/approve/:pharmacyId',
+  '/pharmacy/approve/:id',
   protect,
   authorizeRoles('admin'),
   approvePharmacy

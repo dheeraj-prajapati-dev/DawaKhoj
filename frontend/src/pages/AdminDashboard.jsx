@@ -5,7 +5,6 @@ const API = 'http://localhost:5000/api/admin';
 
 export default function AdminDashboard() {
   const [pharmacies, setPharmacies] = useState([]);
-
   const token = localStorage.getItem('token');
 
   const fetchPharmacies = async () => {
@@ -15,9 +14,9 @@ export default function AdminDashboard() {
           Authorization: `Bearer ${token}`
         }
       });
-      setPharmacies(res.data.pharmacies);
+      setPharmacies(res.data.pharmacies); // ✅ correct
     } catch (err) {
-      console.error('Fetch pharmacies error:', err);
+      console.error(err);
     }
   };
 
@@ -32,9 +31,9 @@ export default function AdminDashboard() {
           }
         }
       );
-      fetchPharmacies();
+      fetchPharmacies(); // 🔥 refresh list
     } catch (err) {
-      console.error('Approve error:', err);
+      console.error(err);
     }
   };
 
