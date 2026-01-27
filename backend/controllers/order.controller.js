@@ -2,11 +2,10 @@ const Order = require('../models/Order');
 const Inventory = require('../models/Inventory');
 const Pharmacy = require('../models/Pharmacy');
 
-// 1. Naya Order Create karna (User Side)
+// 1. Create New Order
 exports.createOrder = async (req, res) => {
     try {
         const { pharmacyId, medicineName, price } = req.body;
-        
         const newOrder = new Order({
             user: req.user._id,
             pharmacy: pharmacyId, 
@@ -14,7 +13,6 @@ exports.createOrder = async (req, res) => {
             price,
             status: 'Pending'
         });
-
         await newOrder.save();
         res.status(201).json({ success: true, message: "Order placed successfully!" });
     } catch (err) {
@@ -22,21 +20,18 @@ exports.createOrder = async (req, res) => {
     }
 };
 
-// 2. Dashboard ke Stats fetch karna (Pharmacy Side)
+// 2. Dashboard Stats
 exports.getPharmacyStats = async (req, res) => {
     try {
         const pharmacyProfile = await Pharmacy.findOne({ owner: req.user._id });
-        
-        if (!pharmacyProfile) {
-            return res.status(404).json({ success: false, message: "Pharmacy not found" });
-        }
+        if (!pharmacyProfile) return res.status(404).json({ success: false, message: "Pharmacy not found" });
 
         const pId = pharmacyProfile._id;
-
-        const [totalMed, pendingOrd, outOfStock] = await Promise.all([
+        const [totalMed, pendingOrd, outOfStockCount, lowStockCount] = await Promise.all([
             Inventory.countDocuments({ pharmacy: pId }),
             Order.countDocuments({ pharmacy: pId, status: 'Pending' }),
-            Inventory.countDocuments({ pharmacy: pId, stock: 0 })
+            Inventory.countDocuments({ pharmacy: pId, stock: 0 }),
+            Inventory.countDocuments({ pharmacy: pId, stock: { $gt: 0, $lte: 5 } }) 
         ]);
 
         const completedOrders = await Order.find({ pharmacy: pId, status: 'Delivered' });
@@ -47,7 +42,8 @@ exports.getPharmacyStats = async (req, res) => {
             stats: {
                 totalMedicines: totalMed,
                 pendingOrders: pendingOrd,
-                outOfStock: outOfStock,
+                outOfStock: outOfStockCount,
+                lowStock: lowStockCount, 
                 revenue: totalRevenue
             }
         });
@@ -56,14 +52,11 @@ exports.getPharmacyStats = async (req, res) => {
     }
 };
 
-// 3. Pharmacy ke saare Orders fetch karna
+// 3. Fetch All Orders
 exports.getPharmacyOrders = async (req, res) => {
     try {
         const pharmacyProfile = await Pharmacy.findOne({ owner: req.user._id });
-
-        if (!pharmacyProfile) {
-            return res.json({ success: true, orders: [] });
-        }
+        if (!pharmacyProfile) return res.json({ success: true, orders: [] });
 
         const orders = await Order.find({ pharmacy: pharmacyProfile._id })
             .populate('user', 'name phone') 
@@ -75,61 +68,48 @@ exports.getPharmacyOrders = async (req, res) => {
     }
 };
 
-// 4. Order Status Update (Isme Check Logic Add Kiya Hai)
+// 4. Update Status (CORRECTED DATABASE LOGIC)
 exports.updateOrderStatus = async (req, res) => {
     try {
+        const { orderId } = req.params;
         const { status } = req.body;
-        const pharmacyProfile = await Pharmacy.findOne({ owner: req.user._id });
 
-        if (!pharmacyProfile) {
-            return res.status(404).json({ success: false, message: "Pharmacy profile missing" });
-        }
+        const order = await Order.findById(orderId);
+        if (!order) return res.status(404).json({ success: false, message: "Order not found" });
 
-        const order = await Order.findOne({ _id: req.params.id, pharmacy: pharmacyProfile._id });
+        if (status === 'Delivered') {
+            // Step 1: Sari inventory leke aao aur Medicine details populate karo
+            const pharmacyInventory = await Inventory.find({ pharmacy: order.pharmacy }).populate('medicine');
 
-        if (!order) {
-            return res.status(404).json({ success: false, message: "Order not found" });
-        }
+            // Step 2: Loop chalao check karne ke liye ki konsi medicine ka naam match hota hai
+            const inventoryItem = pharmacyInventory.find(item => 
+                item.medicine && item.medicine.name.toLowerCase() === order.medicineName.toLowerCase()
+            );
 
-        // --- ACCURATE STOCK UPDATE LOGIC ---
-        if (status === 'Delivered' && order.status !== 'Delivered') {
-            const orderMedName = order.medicineName.trim().toLowerCase();
-            
-            // 1. Inventory fetch karein aur linked 'medicine' collection se 'name' mangwayein
-            const inventoryItems = await Inventory.find({ pharmacy: pharmacyProfile._id })
-                                                  .populate('medicine'); 
-
-            // 2. Populated data mein match dhoondhein
-            const inventoryItem = inventoryItems.find(item => {
-                // Compass ke mutabik: item.medicine object hai jisme 'name' field hai
-                const dbMedName = (item.medicine && item.medicine.name) 
-                                  ? item.medicine.name.trim().toLowerCase() 
-                                  : null;
-                return dbMedName === orderMedName;
-            });
-
-            if (inventoryItem) {
-                if (inventoryItem.stock > 0) {
-                    inventoryItem.stock -= 1; // Stock ek se kam karein
-                    await inventoryItem.save();
-                    console.log(`✅ Stock Updated: ${order.medicineName} | New Stock: ${inventoryItem.stock}`);
-                } else {
-                    console.log(`⚠️ Stock low for ${order.medicineName}, but status updated.`);
-                }
-            } else {
-                // Debugging ke liye agar match na ho
-                console.log(`❌ Inventory Match Failed for: "${orderMedName}"`);
-                console.log("DB Available:", inventoryItems.map(i => i.medicine?.name));
+            if (!inventoryItem) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: `Medicine '${order.medicineName}' aapki inventory mein nahi hai!` 
+                });
             }
+
+            if (inventoryItem.stock <= 0) {
+                return res.status(400).json({ success: false, message: "Stock 0 hai, delivery nahi ho sakti!" });
+            }
+
+            // Step 3: Stock deduct karo
+            inventoryItem.stock -= 1;
+            await inventoryItem.save();
         }
 
-        // 3. Status update hamesha hoga
+        // Status update hamesha chalega (Accepted ke liye bhi aur Delivered ke liye bhi)
         order.status = status;
         await order.save();
 
-        res.json({ success: true, message: `Order marked as ${status}`, order });
+        res.json({ success: true, message: `Order marked as ${status}!` });
+
     } catch (err) {
-        console.error("Critical Update Error:", err);
+        console.error("Update Error:", err);
         res.status(500).json({ success: false, message: err.message });
     }
 };

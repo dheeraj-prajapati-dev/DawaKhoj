@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react';
 import { useInventory } from '../hooks/useInventory';
 import { getMyPharmacyProfile } from '../services/pharmacy.service';
 import AddMedicineModal from '../components/inventory/AddMedicineModal';
-import EditMedicineModal from '../components/inventory/EditMedicineModal'; // ✅ Naya Import
+import EditMedicineModal from '../components/inventory/EditMedicineModal';
 import axios from 'axios';
 
 export default function PharmacyInventory() {
   const { inventory, loading, fetchInventory } = useInventory();
   const [showAddModal, setShowAddModal] = useState(false);
-  const [editingItem, setEditingItem] = useState(null); // ✅ Selected item for edit
+  const [editingItem, setEditingItem] = useState(null);
   const [isVerified, setIsVerified] = useState(false);
 
   useEffect(() => {
@@ -23,7 +23,6 @@ export default function PharmacyInventory() {
     loadProfile();
   }, []);
 
-  // ✅ Delete Function
   const handleDelete = async (id) => {
     if (window.confirm("Kya aap is medicine ko inventory se hatana chahte hain?")) {
       try {
@@ -91,15 +90,32 @@ export default function PharmacyInventory() {
                     <td className="px-4 py-3 font-medium">{item.medicine?.name || item.name}</td>
                     <td className="px-4 py-3 text-gray-600">{item.medicine?.salt || item.salt}</td>
                     <td className="px-4 py-3">₹{item.price}</td>
+                    
+                    {/* --- START OF LOW STOCK ALERT LOGIC --- */}
                     <td className="px-4 py-3">
-                        <span className={`px-2 py-1 rounded-full text-xs ${item.stock < 10 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
-                            {item.stock} in stock
+                      {item.stock === 0 ? (
+                        // Case 1: Out of Stock (Red Badge)
+                        <span className="px-2 py-1 rounded-full text-xs font-bold bg-red-200 text-red-800">
+                          Out of Stock
                         </span>
+                      ) : item.stock <= 10 ? (
+                        // Case 2: Low Stock Alert (Yellow/Orange Badge)
+                        <span className="px-2 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-700 animate-pulse">
+                          Low Stock: {item.stock}
+                        </span>
+                      ) : (
+                        // Case 3: Healthy Stock (Green Badge)
+                        <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                          {item.stock} in stock
+                        </span>
+                      )}
                     </td>
+                    {/* --- END OF LOW STOCK ALERT LOGIC --- */}
+
                     <td className="px-4 py-3 flex justify-center gap-4">
                       <button
                         disabled={!isVerified}
-                        onClick={() => setEditingItem(item)} // ✅ Modal khulega
+                        onClick={() => setEditingItem(item)}
                         className="text-blue-600 hover:text-blue-800 font-medium disabled:text-gray-400"
                       >
                         Edit
@@ -120,7 +136,6 @@ export default function PharmacyInventory() {
         </div>
       </div>
 
-      {/* ✅ MODALS SECTION */}
       {showAddModal && isVerified && (
         <AddMedicineModal onClose={() => setShowAddModal(false)} refresh={fetchInventory} />
       )}

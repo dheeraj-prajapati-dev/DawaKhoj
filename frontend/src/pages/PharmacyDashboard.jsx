@@ -7,6 +7,7 @@ export default function PharmacyDashboard() {
     totalMedicines: 0,
     pendingOrders: 0,
     outOfStock: 0,
+    lowStock: 0, // Track medicines with low quantity
     revenue: "0"
   });
   const navigate = useNavigate();
@@ -19,7 +20,7 @@ export default function PharmacyDashboard() {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (res.data.success) {
-          setStats(res.data.stats);
+          setStats(res.data.stats); // Setting stats from backend
         }
       } catch (err) {
         console.error("Error fetching stats:", err);
@@ -36,17 +37,27 @@ export default function PharmacyDashboard() {
           <p className="text-sm text-gray-500">Manage your pharmacy operations</p>
         </div>
         <button 
-          onClick={() => navigate("/pharmacy/inventory/add")}
+          onClick={() => navigate("/pharmacy/inventory")} 
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
         >
-          + Add Medicine
+          Manage Inventory
         </button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      {/* Stats Cards Grid - Adjusted to 5 columns for symmetry */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
         <DashboardCard title="Total Medicines" value={stats.totalMedicines} />
-        <DashboardCard title="Out of Stock" value={stats.outOfStock} danger />
+        
+        {/* --- LOW STOCK ALERT CARD --- */}
+        <DashboardCard 
+          title="Low Stock" 
+          value={stats.lowStock} 
+          warning={stats.lowStock > 0} // Trigger blink if count > 0
+        />
+
+        {/* Danger alert if items are completely out of stock */}
+        <DashboardCard title="Out of Stock" value={stats.outOfStock} danger={stats.outOfStock > 0} />
+        
         <DashboardCard title="Pending Orders" value={stats.pendingOrders} />
         <DashboardCard title="Today's Revenue" value={`₹ ${stats.revenue}`} />
       </div>
@@ -86,13 +97,27 @@ export default function PharmacyDashboard() {
   );
 }
 
-function DashboardCard({ title, value, danger }) {
+/**
+ * Enhanced DashboardCard Component 
+ * Added forced 'animate-pulse' and background colors for better visibility
+ */
+function DashboardCard({ title, value, danger, warning }) {
   return (
-    <div className="bg-white rounded-xl p-5 shadow border-b-4 border-transparent hover:border-blue-500 transition-all">
-      <p className="text-sm text-gray-500 mb-1">{title}</p>
-      <h3 className={`text-2xl font-bold ${danger ? 'text-red-600' : 'text-gray-800'}`}>
+    <div className={`bg-white rounded-xl p-5 shadow border-b-4 transition-all ${
+      danger ? 'border-red-500 bg-red-50' : 
+      warning ? 'border-orange-500 bg-orange-50 animate-pulse' : 
+      'border-transparent hover:border-blue-500'
+    }`}>
+      <p className="text-xs text-gray-500 mb-1 uppercase font-bold tracking-wider">{title}</p>
+      <h3 className={`text-2xl font-bold ${
+        danger ? 'text-red-600' : 
+        warning ? 'text-orange-600' : 
+        'text-gray-800'
+      }`}>
         {value}
       </h3>
+      {/* Visual Indicator for Alerts */}
+      {warning && <p className="text-[10px] text-orange-500 mt-1 font-bold italic underline">Refill Soon!</p>}
     </div>
   );
 }
