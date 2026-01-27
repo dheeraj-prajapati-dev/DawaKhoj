@@ -38,14 +38,14 @@ exports.prescriptionToPharmacy = async (req, res) => {
 
     // 4️⃣ Find nearby pharmacies
     const nearbyPharmacies = await Pharmacy.find({
-      isVerified: true,
+      // isVerified: true,
       location: {
         $near: {
           $geometry: {
             type: 'Point',
             coordinates: [Number(lng), Number(lat)]
           },
-          $maxDistance: 5000
+          $maxDistance: 20000
         }
       }
     }).select('_id storeName phone homeDelivery open24x7 location');
@@ -76,9 +76,11 @@ exports.prescriptionToPharmacy = async (req, res) => {
         .populate({
           path: 'medicine',
           match: {
-            // 🔥 ONLY SALT MATCH (FINAL FIX)
-            salt: new RegExp(med.salt, 'i')
-          }
+            $or: [
+      { salt: new RegExp(med.salt, 'i') },
+      { name: new RegExp(med.brand || med.salt, 'i') } // 👈 Brand aur Name dono check honge
+    ]
+}
         })
         .populate({
           path: 'pharmacy',
@@ -91,11 +93,14 @@ exports.prescriptionToPharmacy = async (req, res) => {
       const options = inventories
         .filter(i => i.medicine && i.pharmacy)
         .map(i => ({
+          pharmacyId: i.pharmacy._id,
           pharmacy: i.pharmacy.storeName,
           phone: i.pharmacy.phone,
           price: i.price,
           stock: i.stock,
-          homeDelivery: i.pharmacy.homeDelivery
+          homeDelivery: i.pharmacy.homeDelivery,
+          medicineName: i.medicine.name,
+          salt: i.medicine.salt
         }));
 
       results.push({

@@ -58,6 +58,10 @@ app.get('/', (req, res) => {
   res.send('Welcome to DawaKhoj API');
 });
 
+// ==== ORDER ROUTES =====
+const orderRoutes = require('./routes/order.routes');
+app.use('/api/orders', orderRoutes);
+
 // ====== SERVER START ======
 const PORT = process.env.PORT || 5000;
 
@@ -91,6 +95,8 @@ app.use('/api/prescription', prescriptionRoutes);
 const flowRoutes = require('./routes/flow.routes');
 app.use('/api/flow', flowRoutes);
 
-
+// ==== ADMIN ROUTES =====
 app.use('/api/admin', require('./routes/admin.routes'));
+
+
 

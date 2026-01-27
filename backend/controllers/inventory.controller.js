@@ -2,14 +2,14 @@ const Inventory = require('../models/Inventory');
 const Medicine = require('../models/Medicine');
 const Pharmacy = require('../models/Pharmacy');
 
-// helper function
+// ✅ HELPER FUNCTION: Bridge between User ID and Pharmacy Profile
 const getVerifiedPharmacy = async (userId) => {
-  const pharmacy = await Pharmacy.findOne({ owner: userId });
+  const pharmacy = await Pharmacy.findOne({ owner: userId }); //
   if (!pharmacy) {
-    throw { status: 404, message: 'Pharmacy not found' };
+    throw { status: 404, message: 'Pharmacy profile not found. Please create one.' };
   }
   if (!pharmacy.isVerified) {
-    throw { status: 403, message: 'Pharmacy not verified by admin' };
+    throw { status: 403, message: 'Pharmacy not verified by admin yet.' };
   }
   return pharmacy;
 };
@@ -18,13 +18,14 @@ const getVerifiedPharmacy = async (userId) => {
 exports.addOrUpdateInventory = async (req, res) => {
   try {
     if (req.user.role !== 'pharmacy') {
-      return res.status(403).json({ message: 'Only pharmacy allowed' });
+      return res.status(403).json({ message: 'Only pharmacy role can perform this action' });
     }
 
-    const pharmacy = await getVerifiedPharmacy(req.user._id);
+    const pharmacy = await getVerifiedPharmacy(req.user._id); //
 
     const { medicineName, salt, category, price, stock } = req.body;
 
+    // Medicine find or create (Case-insensitive)
     let medicine = await Medicine.findOne({
       name: new RegExp(`^${medicineName}$`, 'i')
     });
@@ -33,6 +34,7 @@ exports.addOrUpdateInventory = async (req, res) => {
       medicine = await Medicine.create({ name: medicineName, salt, category });
     }
 
+    // Pharmacy ID use karke inventory update karein
     const inventory = await Inventory.findOneAndUpdate(
       { pharmacy: pharmacy._id, medicine: medicine._id },
       { price: Number(price), stock: Number(stock) },
@@ -46,18 +48,20 @@ exports.addOrUpdateInventory = async (req, res) => {
   }
 };
 
-// 📦 GET MY INVENTORY (view allowed even if not verified)
+// 📦 GET MY INVENTORY
 exports.getMyInventory = async (req, res) => {
   try {
     if (req.user.role !== 'pharmacy') {
-      return res.status(403).json({ message: 'Only pharmacy allowed' });
+      return res.status(403).json({ message: 'Access denied' });
     }
 
+    // Owner ID se Pharmacy dhoondein
     const pharmacy = await Pharmacy.findOne({ owner: req.user._id });
     if (!pharmacy) {
-      return res.status(404).json({ message: 'Pharmacy not found' });
+      return res.status(404).json({ message: 'Pharmacy profile not found' });
     }
 
+    // Sirf is pharmacy ki inventory laayein
     const inventory = await Inventory.find({ pharmacy: pharmacy._id })
       .populate('medicine', 'name salt category')
       .sort({ createdAt: -1 });
@@ -77,20 +81,25 @@ exports.getMyInventory = async (req, res) => {
 exports.updateInventory = async (req, res) => {
   try {
     if (req.user.role !== 'pharmacy') {
-      return res.status(403).json({ message: 'Only pharmacy allowed' });
+      return res.status(403).json({ message: 'Unauthorized' });
     }
 
-    await getVerifiedPharmacy(req.user._id);
+    const pharmacy = await getVerifiedPharmacy(req.user._id);
 
-    const inventory = await Inventory.findById(req.params.id);
+    // ✅ Security Fix: Pehle check karein inventory item is pharmacy ka hai ya nahi
+    const inventory = await Inventory.findOne({ 
+      _id: req.params.id, 
+      pharmacy: pharmacy._id 
+    });
+
     if (!inventory) {
-      return res.status(404).json({ message: 'Inventory not found' });
+      return res.status(404).json({ message: 'Inventory item not found or unauthorized' });
     }
 
-    inventory.price = req.body.price ?? inventory.price;
-    inventory.stock = req.body.stock ?? inventory.stock;
+    inventory.price = req.body.price !== undefined ? Number(req.body.price) : inventory.price;
+    inventory.stock = req.body.stock !== undefined ? Number(req.body.stock) : inventory.stock;
+    
     await inventory.save();
-
     res.json({ success: true, inventory });
 
   } catch (err) {
@@ -102,18 +111,22 @@ exports.updateInventory = async (req, res) => {
 exports.deleteInventory = async (req, res) => {
   try {
     if (req.user.role !== 'pharmacy') {
-      return res.status(403).json({ message: 'Only pharmacy allowed' });
+      return res.status(403).json({ message: 'Unauthorized' });
     }
 
-    await getVerifiedPharmacy(req.user._id);
+    const pharmacy = await getVerifiedPharmacy(req.user._id);
 
-    const inventory = await Inventory.findById(req.params.id);
+    // ✅ Security Fix: Ensure ownership before deleting
+    const inventory = await Inventory.findOneAndDelete({ 
+      _id: req.params.id, 
+      pharmacy: pharmacy._id 
+    });
+
     if (!inventory) {
-      return res.status(404).json({ message: 'Inventory not found' });
+      return res.status(404).json({ message: 'Inventory item not found or unauthorized' });
     }
 
-    await inventory.deleteOne();
-    res.json({ success: true });
+    res.json({ success: true, message: "Item deleted successfully" });
 
   } catch (err) {
     res.status(err.status || 500).json({ message: err.message });
