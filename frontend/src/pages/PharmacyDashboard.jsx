@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import { io } from "socket.io-client"; // 👈 Naya install kiya hua
-
-const socket = io("https://dawakhoj.onrender.com");
+import { io } from "socket.io-client";
+import { toast, Toaster } from "react-hot-toast"; // Toaster add kiya
 
 export default function PharmacyDashboard() {
   const [stats, setStats] = useState({
@@ -12,7 +11,7 @@ export default function PharmacyDashboard() {
     outOfStock: 0,
     lowStock: 0,
     revenue: "0",
-    pharmacyId: "" // 👈 Room join karne ke liye
+    pharmacyId: ""
   });
   const [recentOrders, setRecentOrders] = useState([]);
   const navigate = useNavigate();
@@ -28,11 +27,13 @@ export default function PharmacyDashboard() {
       ]);
 
       if (statsRes.data.success) {
-        // Stats update karein aur pharmacy ID extract karein
-        setStats({ 
+        // Stats update karein
+        setStats(prev => ({ 
+          ...prev,
           ...statsRes.data.stats, 
-          pharmacyId: ordersRes.data.orders[0]?.pharmacy || "" 
-        });
+          // Agar orders se ID mil rahi hai toh set karein
+          pharmacyId: ordersRes.data.orders[0]?.pharmacy || prev.pharmacyId 
+        }));
       }
       if (ordersRes.data.success) {
         setRecentOrders(ordersRes.data.orders.slice(0, 5));
@@ -45,17 +46,40 @@ export default function PharmacyDashboard() {
   useEffect(() => {
     fetchData();
 
-    // SOCKET LISTENERS
-    if (stats.pharmacyId) {
-      socket.emit("join_pharmacy", stats.pharmacyId);
-    }
-
-    socket.on("new_order_alert", (data) => {
-      alert("🔔 " + data.message); // Real-time notification!
-      fetchData(); // Dashboard auto-refresh
+    // 1. Live Socket Connection (Optimized for Render)
+    const socket = io("https://dawakhoj.onrender.com", {
+      transports: ["websocket", "polling"],
+      withCredentials: true
     });
 
-    return () => socket.off("new_order_alert");
+    // 2. Room Join karne ka logic
+    if (stats.pharmacyId) {
+      console.log("Joining Pharmacy Room:", stats.pharmacyId);
+      socket.emit("join_room", stats.pharmacyId);
+    }
+
+    // 3. New Order Notification
+    socket.on("new_order_alert", (data) => {
+      toast.success(`📦 ${data.message}`, {
+        duration: 6000,
+        icon: '🚀',
+      });
+      fetchData(); // Auto refresh stats
+    });
+
+    // 4. Global Search Notification (Jo humne search controller mein banaya)
+    socket.on("search_alert", (data) => {
+      toast(data.message, {
+        icon: '🔍',
+        style: { borderRadius: '10px', background: '#333', color: '#fff' }
+      });
+    });
+
+    return () => {
+      socket.off("new_order_alert");
+      socket.off("search_alert");
+      socket.disconnect();
+    };
   }, [stats.pharmacyId]);
 
   const handleUpdateStatus = async (orderId, newStatus) => {
@@ -66,28 +90,30 @@ export default function PharmacyDashboard() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       if (res.data.success) {
-        alert(`Order marked as ${newStatus}`);
+        toast.success(`Order marked as ${newStatus}`);
         fetchData();
       }
     } catch (err) {
-      alert(err.response?.data?.message || "Update failed");
+      toast.error(err.response?.data?.message || "Update failed");
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-100 p-6">
+      <Toaster position="top-right" reverseOrder={false} />
+      
       {/* Header Section */}
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Pharmacy Dashboard</h1>
-          <p className="text-sm text-gray-500">Manage your pharmacy operations</p>
+          <p className="text-sm text-gray-500">Real-time monitoring active ⚡</p>
         </div>
-        <button onClick={() => navigate("/pharmacy/inventory")} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all font-bold">
+        <button onClick={() => navigate("/pharmacy/inventory")} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all font-bold shadow-md">
           Manage Inventory
         </button>
       </div>
 
-      {/* Stats Cards - Aapka Original Grid */}
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
         <DashboardCard title="Total Medicines" value={stats.totalMedicines} />
         <DashboardCard title="Low Stock" value={stats.lowStock} warning={stats.lowStock > 0} />
@@ -96,9 +122,8 @@ export default function PharmacyDashboard() {
         <DashboardCard title="Today's Revenue" value={`₹ ${stats.revenue}`} />
       </div>
 
-      {/* Main Content Area */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Side: Recent Orders Table */}
+        {/* Recent Orders Table */}
         <div className="lg:col-span-2 bg-white rounded-xl p-5 shadow border border-gray-100">
           <div className="flex justify-between items-center mb-4">
             <h2 className="font-semibold text-lg">Recent Pending Orders</h2>
@@ -108,7 +133,7 @@ export default function PharmacyDashboard() {
             <table className="w-full text-sm text-left">
               <thead className="bg-gray-50 text-gray-600">
                 <tr>
-                  <th className="p-3">Customer Details</th>
+                  <th className="p-3">Customer</th>
                   <th className="p-3">Medicine</th>
                   <th className="p-3">Action</th>
                 </tr>
@@ -117,19 +142,16 @@ export default function PharmacyDashboard() {
                 {recentOrders.filter(o => o.status === 'Pending').map(order => (
                   <tr key={order._id} className="border-t hover:bg-gray-50 transition-colors">
                     <td className="p-3">
-  <p className="font-bold text-gray-800">{order.user?.name || "Customer"}</p>
-  <p className="text-[10px] text-blue-500 font-medium italic">
-    {/* Agar city hai toh dikhao, nahi toh prompt do */}
-    📍 {order.user?.address?.city 
-        ? `${order.user.address.city}, ${order.user.address.pincode}` 
-        : "Address not updated"}
-  </p>
-</td>
+                      <p className="font-bold text-gray-800">{order.user?.name || "Customer"}</p>
+                      <p className="text-[10px] text-blue-500 font-medium italic">
+                        📍 {order.user?.address?.city || "Location N/A"}
+                      </p>
+                    </td>
                     <td className="p-3 font-medium text-gray-700">{order.medicineName}</td>
                     <td className="p-3">
                       <button 
                         onClick={() => handleUpdateStatus(order._id, 'Delivered')}
-                        className="bg-green-100 text-green-700 px-3 py-1 rounded-md text-xs font-black hover:bg-green-200 transition-colors"
+                        className="bg-green-100 text-green-700 px-3 py-1 rounded-md text-xs font-black hover:bg-green-200"
                       >
                         Mark Delivered
                       </button>
@@ -139,25 +161,25 @@ export default function PharmacyDashboard() {
               </tbody>
             </table>
             {recentOrders.filter(o => o.status === 'Pending').length === 0 && (
-                <p className="text-center py-10 text-gray-400 font-medium italic">No pending orders at the moment ✨</p>
+                <p className="text-center py-10 text-gray-400 font-medium italic">No pending orders ✨</p>
             )}
           </div>
         </div>
 
-        {/* Right Side: Quick Actions & Status */}
+        {/* Status & Tips */}
         <div className="space-y-6">
             <div className="bg-white rounded-xl p-5 shadow border border-gray-100">
-                <h2 className="font-semibold text-lg mb-4 text-gray-800">Pharmacy Status</h2>
+                <h2 className="font-semibold text-lg mb-4 text-gray-800">System Status</h2>
                 <div className="flex items-center gap-3 bg-green-50 p-3 rounded-lg border border-green-100">
                     <span className="h-3 w-3 rounded-full bg-green-500 animate-pulse"></span>
-                    <span className="text-sm font-bold text-green-700">Verified & Active</span>
+                    <span className="text-sm font-bold text-green-700">Socket Connected</span>
                 </div>
             </div>
             
             <div className="bg-white rounded-xl p-5 shadow border-l-4 border-blue-500">
                 <h2 className="font-semibold text-md text-blue-800">Inventory Tip</h2>
                 <p className="text-xs text-gray-500 mt-2 leading-relaxed">
-                  Bhai, aapke <span className="font-bold text-orange-600">{stats.lowStock} items</span> low stock mein hain. Jaldi refill karo taaki koi order miss na ho!
+                  Bhai, aapke <span className="font-bold text-orange-600">{stats.lowStock} items</span> low stock mein hain. Stock maintain rakho!
                 </p>
             </div>
         </div>
@@ -166,7 +188,6 @@ export default function PharmacyDashboard() {
   );
 }
 
-// Sundar DashboardCard Component
 function DashboardCard({ title, value, danger, warning }) {
   return (
     <div className={`bg-white rounded-xl p-5 shadow border-b-4 transition-all duration-300 ${
