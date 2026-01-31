@@ -2,8 +2,8 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
-const http = require('http'); // 👈 Naya
-const { Server } = require('socket.io'); // 👈 Naya
+const http = require('http'); 
+const { Server } = require('socket.io'); 
 const connectDB = require('./config/db');
 
 // ====== ENV & DB ======
@@ -11,38 +11,40 @@ dotenv.config();
 connectDB();
 
 const app = express();
-const server = http.createServer(app); // 👈 Server create kiya
+const server = http.createServer(app); 
 
 // ====== SOCKET SETUP ======
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173", // Aapka frontend URL
-    methods: ["GET", "POST", "PUT"]
+    // Frontend URLs ko yahan bhi update kiya taaki socket connect ho sake
+    origin: ["https://dawa-khoj.vercel.app", "http://localhost:5173"], 
+    methods: ["GET", "POST", "PUT"],
+    credentials: true
   }
 });
 
-// Socket connection logic
 io.on('connection', (socket) => {
   console.log('⚡ Connected:', socket.id);
-
   socket.on('join_room', (roomId) => {
     socket.join(roomId);
     console.log(`✅ User/Pharmacy Joined Room: ${roomId} `);
   });
-
   socket.on('disconnect', () => console.log('❌ Disconnected'));
 });
 
-// Taaki controllers io use kar sakein
 app.set('socketio', io);
 
 // ====== MIDDLEWARES ======
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cors(cors({
+
+// FIX: cors(cors(...)) ko hata kar simple app.use(cors(...)) kiya
+app.use(cors({
   origin: ["https://dawa-khoj.vercel.app", "http://localhost:5173"],
-  credentials: true
-})));
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
 
 // ====== ROUTES ======
 app.use('/api/auth', require('./routes/auth.routes'));
@@ -65,6 +67,6 @@ app.get('/', (req, res) => res.send('Welcome to DawaKhoj API'));
 
 // ====== SERVER START ======
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => { // 👈 server.listen use karein
+server.listen(PORT, () => { 
   console.log(`✅ Server running on port ${PORT}`);
 });
