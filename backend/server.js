@@ -38,7 +38,11 @@ app.set('socketio', io);
 
 // ====== MIDDLEWARES ======
 app.use(express.json());
-app.use(cors());
+app.use(express.urlencoded({ extended: true }));
+app.use(cors(cors({
+  origin: ["https://dawa-khoj.vercel.app", "http://localhost:5173"],
+  credentials: true
+})));
 
 // ====== ROUTES ======
 app.use('/api/auth', require('./routes/auth.routes'));
