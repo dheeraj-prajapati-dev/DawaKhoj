@@ -27,7 +27,7 @@ export default function PharmacyInventory() {
     if (window.confirm("Kya aap is medicine ko inventory se hatana chahte hain?")) {
       try {
         const token = localStorage.getItem("token");
-        await axios.delete(`http://localhost:5000/api/inventory/delete/${id}`, {
+        await axios.delete(`https://dawakhoj.onrender.com/api/inventory/delete/${id}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         alert("Medicine deleted successfully!");

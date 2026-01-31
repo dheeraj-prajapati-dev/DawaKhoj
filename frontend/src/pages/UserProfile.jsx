@@ -11,7 +11,7 @@ const UserProfile = () => {
     // Backend se current user data lao
     const fetchProfile = async () => {
       const token = localStorage.getItem('token');
-      const res = await axios.get('http://localhost:5000/api/auth/me', {
+      const res = await axios.get('https://dawakhoj.onrender.com/api/auth/me', {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data.success) setUser(res.data.user);
@@ -23,7 +23,7 @@ const UserProfile = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.put('http://localhost:5000/api/auth/update-profile', user, {
+      const res = await axios.put('https://dawakhoj.onrender.com/api/auth/update-profile', user, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data.success) alert("Profile & Address Updated! ✅");

@@ -8,7 +8,7 @@ export default function PharmacyOrders() {
   const fetchOrders = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get("http://localhost:5000/api/orders/pharmacy-orders", {
+      const res = await axios.get("https://dawakhoj.onrender.com/api/orders/pharmacy-orders", {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data.success) {
@@ -31,7 +31,7 @@ export default function PharmacyOrders() {
       const token = localStorage.getItem("token");
       
       // Yahan maine '/update/' ko badal kar '/status/' kar diya hai jo aapke purane code mein tha
-      await axios.put(`http://localhost:5000/api/orders/status/${orderId}`, 
+      await axios.put(`https://dawakhoj.onrender.com/api/orders/status/${orderId}`, 
         { status: newStatus },
         { headers: { Authorization: `Bearer ${token}` } }
       );

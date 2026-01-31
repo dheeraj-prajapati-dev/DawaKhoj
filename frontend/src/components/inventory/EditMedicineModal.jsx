@@ -12,7 +12,7 @@ export default function EditMedicineModal({ item, onClose, refresh }) {
     try {
       const token = localStorage.getItem("token");
       // Backend update route
-      await axios.put(`http://localhost:5000/api/inventory/update/${item._id}`, 
+      await axios.put(`https://dawakhoj.onrender.com/api/inventory/update/${item._id}`, 
         { price: Number(price), stock: Number(stock) },
         { headers: { Authorization: `Bearer ${token}` } }
       );

@@ -12,7 +12,7 @@ const MedicineSearch = () => {
     setLoading(true);
 
     try {
-      const res = await axios.get(`http://localhost:5000/api/search/medicine`, {
+      const res = await axios.get(`https://dawakhoj.onrender.com/api/search/medicine`, {
         params: { q: query }
       });
 
@@ -39,7 +39,7 @@ const MedicineSearch = () => {
         price: item.price
       };
 
-      const res = await axios.post('http://localhost:5000/api/orders/create', orderData, {
+      const res = await axios.post('https://dawakhoj.onrender.com/api/orders/create', orderData, {
         headers: { Authorization: `Bearer ${token}` }
       });
 

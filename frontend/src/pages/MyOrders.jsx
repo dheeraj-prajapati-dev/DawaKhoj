@@ -8,12 +8,12 @@ const MyOrders = () => {
 
   useEffect(() => {
     // 1. Socket connection setup (Internal)
-    const newSocket = io('http://localhost:5000');
+    const newSocket = io('https://dawakhoj.onrender.com');
 
     const fetchMyOrders = async () => {
       try {
         const token = localStorage.getItem('token');
-        const res = await axios.get('http://localhost:5000/api/orders/my-orders', {
+        const res = await axios.get('https://dawakhoj.onrender.com/api/orders/my-orders', {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (res.data.success) setOrders(res.data.orders);

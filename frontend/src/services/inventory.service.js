@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { authHeader } from '../utils/authHeader';
 
-const API = 'http://localhost:5000/api/inventory';
+const API = 'https://dawakhoj.onrender.com/api/inventory';
 
 export const getMyInventory = () =>
   axios.get(`${API}/my`, { headers: authHeader() });

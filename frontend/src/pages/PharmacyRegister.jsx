@@ -34,7 +34,7 @@ export default function PharmacyRegister() {
 
     try {
       await axios.post(
-        'http://localhost:5000/api/pharmacy/register',
+        'https://dawakhoj.onrender.com/api/pharmacy/register',
         {
           storeName: form.storeName,
           phone: form.phone,

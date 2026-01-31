@@ -3,7 +3,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { io } from "socket.io-client"; // 👈 Naya install kiya hua
 
-const socket = io("http://localhost:5000");
+const socket = io("https://dawakhoj.onrender.com");
 
 export default function PharmacyDashboard() {
   const [stats, setStats] = useState({
@@ -23,8 +23,8 @@ export default function PharmacyDashboard() {
       const headers = { Authorization: `Bearer ${token}` };
 
       const [statsRes, ordersRes] = await Promise.all([
-        axios.get("http://localhost:5000/api/orders/stats", { headers }),
-        axios.get("http://localhost:5000/api/orders/pharmacy-orders", { headers })
+        axios.get("https://dawakhoj.onrender.com/api/orders/stats", { headers }),
+        axios.get("https://dawakhoj.onrender.com/api/orders/pharmacy-orders", { headers })
       ]);
 
       if (statsRes.data.success) {
@@ -61,7 +61,7 @@ export default function PharmacyDashboard() {
   const handleUpdateStatus = async (orderId, newStatus) => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.put(`http://localhost:5000/api/orders/status/${orderId}`, 
+      const res = await axios.put(`https://dawakhoj.onrender.com/api/orders/status/${orderId}`, 
         { status: newStatus }, 
         { headers: { Authorization: `Bearer ${token}` } }
       );

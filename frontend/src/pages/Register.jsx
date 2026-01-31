@@ -17,7 +17,7 @@ export default function Register() {
     e.preventDefault();
     try {
       // Backend URL check karein (Postman wala hi hai)
-      await axios.post('http://localhost:5000/api/auth/register', formData);
+      await axios.post('https://dawakhoj.onrender.com/api/auth/register', formData);
       toast.success('Registration safal raha! Ab login karein.');
       setTimeout(() => navigate('/login'), 2000);
     } catch (err) {

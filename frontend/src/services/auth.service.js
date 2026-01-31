@@ -1,9 +1,9 @@
 import axios from 'axios';
 
-const API = 'http://localhost:5000/api/auth';
+const API = 'https://dawakhoj.onrender.com/api/auth';
 
 export const login = async (data) => {
-  const res = await axios.post('http://localhost:5000/api/auth/login', data);
+  const res = await axios.post('https://dawakhoj.onrender.com/api/auth/login', data);
 
 // 🔥 TOKEN SAVE KARO (MOST IMPORTANT)
 localStorage.setItem('token', res.data.token);

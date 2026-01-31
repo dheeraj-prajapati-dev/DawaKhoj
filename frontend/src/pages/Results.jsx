@@ -26,7 +26,7 @@ export default function Results() {
     if (confirmOrder) {
       const token = localStorage.getItem("token"); // Auth check
       
-      const response = await axios.post('http://localhost:5000/api/orders/create', { 
+      const response = await axios.post('https://dawakhoj.onrender.com/api/orders/create', { 
         pharmacyId: option.pharmacyId, 
         medicineName: name,
         price: option.price 
