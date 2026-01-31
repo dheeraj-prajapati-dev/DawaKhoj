@@ -1,69 +1,50 @@
-const Inventory = require('../models/Inventory');
 const Medicine = require('../models/Medicine');
+const Inventory = require('../models/Inventory');
+const Pharmacy = require('../models/Pharmacy');
 
 exports.searchMedicinePrices = async (req, res) => {
   try {
-    const { q, lat, lng } = req.query;
+    const { q } = req.query; // Lat/Lng ki zaroorat nahi abhi
+    console.log("🔍 Dummy Search for:", q);
 
-    if (!q || !lat || !lng) {
-      return res.status(400).json({
-        message: 'q, lat and lng are required'
-      });
-    }
-
-    // 1️⃣ Medicine find
-    const medicine = await Medicine.findOne({
+    // 1. Medicine dhoondo
+    const medicines = await Medicine.find({
       $or: [
         { name: new RegExp(q, 'i') },
         { salt: new RegExp(q, 'i') }
       ]
     });
 
-    if (!medicine) {
-      return res.json({
-        medicine: q,
-        results: []
-      });
-    }
+    if (!medicines.length) return res.json({ success: true, results: [] });
 
-    // 2️⃣ Inventory + nearest pharmacy
+    // 2. Inventory dhoondo (Stock > 0)
     const inventories = await Inventory.find({
-      medicine: medicine._id,
+      medicine: { $in: medicines.map(m => m._id) },
       stock: { $gt: 0 }
     })
-      .populate({
-        path: 'pharmacy',
-        match: {
-          isVerified: true,
-          location: {
-            $near: {
-              $geometry: {
-                type: 'Point',
-                coordinates: [
-                  parseFloat(lng),
-                  parseFloat(lat)
-                ]
-              },
-              $maxDistance: 5000 // 5km
-            }
-          }
-        },
-        select: 'storeName address location'
-      })
-      .sort({ price: 1 });
+    .populate('medicine')
+    .populate('pharmacy');
 
-    // 3️⃣ remove null pharmacies
-    const result = inventories.filter(i => i.pharmacy);
+    // 3. Format & Group results
+    const finalResults = medicines.map(med => {
+      const options = inventories
+        .filter(inv => inv.pharmacy && inv.medicine._id.toString() === med._id.toString())
+        .map(inv => ({
+          pharmacyId: inv.pharmacy._id,
+          pharmacy: inv.pharmacy.storeName,
+          medicineName: inv.medicine.name,
+          salt: inv.medicine.salt,
+          price: inv.price,
+          stock: inv.stock
+        }));
 
-    res.status(200).json({
-      medicine: medicine.name,
-      salt: medicine.salt,
-      count: result.length,
-      results: result
-    });
+      return options.length > 0 ? { brand: med.name, options } : null;
+    }).filter(g => g !== null);
 
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: error.message });
+    console.log(`✅ Search successful. Found ${finalResults.length} groups.`);
+    res.status(200).json({ success: true, results: finalResults });
+  } catch (err) {
+    console.error("❌ Search Error:", err);
+    res.status(500).json({ success: false, message: err.message });
   }
 };

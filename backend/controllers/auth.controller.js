@@ -66,3 +66,31 @@ exports.loginUser = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+
+// Profile Update Logic
+exports.updateProfile = async (req, res) => {
+  try {
+    const { name, phone, address } = req.body;
+    
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user.id, // Auth middleware se milta hai
+      { 
+        $set: { 
+          name, 
+          phone, 
+          address: {
+            city: address.city,
+            state: address.state,
+            pincode: address.pincode
+          }
+        } 
+      },
+      { new: true, runValidators: true }
+    ).select("-password");
+
+    res.json({ success: true, user: updatedUser });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};

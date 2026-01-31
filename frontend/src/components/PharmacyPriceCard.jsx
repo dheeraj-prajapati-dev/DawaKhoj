@@ -1,30 +1,49 @@
+// PharmacyPriceCard.jsx
+
 export default function PharmacyPriceCard({ option, isBest, onOrder }) {
   return (
-    <div className={`p-4 border rounded-lg flex justify-between items-center ${
-      isBest ? 'border-green-500 bg-green-50' : 'border-gray-200'
-    }`}>
+    <div className={`p-4 border rounded-lg flex justify-between items-center ${isBest ? 'bg-green-50 border-green-200' : 'bg-white'}`}>
       <div>
-        <h4 className="font-bold text-lg text-gray-800">{option.pharmacy}</h4>
-        <p className="text-sm text-gray-600 italic">Salt: {option.salt}</p>
-        <div className="flex items-center gap-3 mt-1">
-          <p className="text-xl font-bold text-blue-700">₹{option.price}</p>
-          {isBest && (
-            <span className="text-[10px] bg-green-600 text-white px-2 py-0.5 rounded uppercase font-bold">
-              Best Match
+        <h4 className="font-bold text-gray-800">{option.pharmacy}</h4>
+        
+        {/* 🔥 Medicine ka Asli Naam (Dolo/Crocin) dikhao */}
+        <p className="text-sm font-bold text-blue-600">
+          {option.medicineName} 
+        </p>
+        <p className="text-xs text-gray-500">Salt: {option.salt}</p>
+        
+        <div className="mt-1">
+          {option.stock > 0 ? (
+            <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-0.5 rounded">
+              In Stock: {option.stock}
+            </span>
+          ) : (
+            <span className="text-xs font-medium text-red-600 bg-red-100 px-2 py-0.5 rounded">
+              Out of Stock
             </span>
           )}
         </div>
-        <p className="text-xs text-gray-500 mt-1">
-          {option.homeDelivery ? "✅ Home Delivery Available" : "🏠 Store Pickup Only"}
-        </p>
       </div>
 
-      <button
-        onClick={() => onOrder(option)}
-        className="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-sm"
-      >
-        Order Now
-      </button>
+      <div className="text-right">
+        <p className="text-xl font-bold text-gray-900">₹{option.price}</p>
+        
+        {option.stock > 0 ? (
+          <button
+            onClick={() => onOrder(option)}
+            className="mt-2 bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm font-semibold hover:bg-blue-700 transition"
+          >
+            Order Now
+          </button>
+        ) : (
+          <button
+            disabled
+            className="mt-2 bg-gray-300 text-gray-500 px-4 py-1.5 rounded-lg text-sm font-semibold cursor-not-allowed"
+          >
+            Out of Stock
+          </button>
+        )}
+      </div>
     </div>
   );
 }

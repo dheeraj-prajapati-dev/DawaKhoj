@@ -7,3 +7,8 @@
 .input {
   @apply w-full border rounded px-3 py-2 focus:outline-none focus:ring focus:border-blue-400;
 }
+
+html {
+  scroll-padding-top: 85px;
+  scroll-behavior: smooth;
+}

@@ -79,40 +79,40 @@ export default function Results() {
         </div>
       </div>
 
-      {/* Medicine Results */}
-      <div className="max-w-5xl mx-auto space-y-6">
-        {results.map((item, idx) => {
-          const minPrice =
-            item.options.length > 0
-              ? Math.min(...item.options.map(o => o.price))
-              : null;
+   {/* Medicine Results Section */}
+<div className="max-w-5xl mx-auto space-y-6">
+  {results.map((item, idx) => {
+    // Har brand group ke liye sabse kam price nikalna
+    const minPrice =
+      item.options.length > 0
+        ? Math.min(...item.options.map(o => o.price))
+        : null;
 
-          return (
-            <div key={idx} className="bg-white rounded-xl shadow p-4 border-l-4 border-blue-500">
-              <h3 className="text-lg font-bold mb-3 text-blue-900">
-                {item.requestedMedicine.brand?.toUpperCase()} ({item.requestedMedicine.salt})
-              </h3>
+    return (
+      <div key={idx} className="bg-white rounded-xl shadow p-4 border-l-4 border-blue-500">
+        {/* 🔥 Yahan item.requestedMedicine.brand hi use hona chahiye */}
+        <h3 className="text-lg font-bold mb-3 text-blue-900">
+          {item.requestedMedicine.brand?.toUpperCase()} ({item.requestedMedicine.salt})
+        </h3>
 
-              {item.options.length === 0 ? (
-                <p className="text-gray-500 italic">
-                  Medicine not available nearby
-                </p>
-              ) : (
-                <div className="grid gap-3">
-                  {item.options.map((opt, i) => (
-                    <PharmacyPriceCard
-                      key={i}
-                      option={opt}
-                      isBest={opt.price === minPrice}
-                      onOrder={handleOrder} // 🔥 Function pass kiya
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
+        {item.options.length === 0 ? (
+          <p className="text-gray-500 italic">Medicine not available nearby</p>
+        ) : (
+          <div className="grid gap-3">
+            {item.options.map((opt, i) => (
+              <PharmacyPriceCard
+                key={i}
+                option={opt}
+                isBest={opt.price === minPrice}
+                onOrder={handleOrder}
+              />
+            ))}
+          </div>
+        )}
       </div>
+    );
+  })}
+</div>
     </div>
   );
 }

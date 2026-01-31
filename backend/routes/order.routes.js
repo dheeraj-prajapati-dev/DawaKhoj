@@ -1,18 +1,21 @@
-// order.routes.js pura code
 const express = require('express');
 const router = express.Router();
 const { 
     createOrder, 
     getPharmacyStats, 
     getPharmacyOrders, 
-    updateOrderStatus 
+    updateOrderStatus,
+    getUserOrders // 👈 Ye naya function add kiya
 } = require('../controllers/order.controller');
-const { protect } = require('../middlewares/authMiddleware');
+const { protect, authorizeRoles } = require('../middlewares/authMiddleware');
 
-
-router.get('/stats', protect, getPharmacyStats);
+// 1. User Routes (Koi bhi logged-in user)
 router.post('/create', protect, createOrder);
-router.get('/pharmacy-orders', protect, getPharmacyOrders); // Controller wala function call karein
-router.put('/status/:orderId', protect, updateOrderStatus);
+router.get('/my-orders', protect, getUserOrders); // User apne orders dekh sake
+
+// 2. Pharmacy Routes (Sirf Pharmacy owner ke liye)
+router.get('/stats', protect, authorizeRoles('pharmacy'), getPharmacyStats);
+router.get('/pharmacy-orders', protect, authorizeRoles('pharmacy'), getPharmacyOrders);
+router.put('/status/:orderId', protect, authorizeRoles('pharmacy'), updateOrderStatus);
 
 module.exports = router;

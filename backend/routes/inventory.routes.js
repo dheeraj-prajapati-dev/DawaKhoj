@@ -9,14 +9,14 @@ const {
 } = require('../controllers/inventory.controller');
 
 const { protect, authorizeRoles } = require('../middlewares/authMiddleware');
-const { requireVerifiedPharmacy } = require('../middlewares/verifiedMiddleware');
+// const { requireVerifiedPharmacy } = require('../middlewares/verifiedMiddleware');
 
 // ✅ FINAL & CORRECT
 router.post(
   '/add',
   protect,
   authorizeRoles('pharmacy'),
-  requireVerifiedPharmacy,
+  // requireVerifiedPharmacy,
   addOrUpdateInventory
 );
 
@@ -31,7 +31,7 @@ router.put(
   '/update/:id',
   protect,
   authorizeRoles('pharmacy'),
-  requireVerifiedPharmacy,
+  // requireVerifiedPharmacy,
   updateInventory
 );
 
@@ -39,7 +39,7 @@ router.delete(
   '/delete/:id',
   protect,
   authorizeRoles('pharmacy'),
-  requireVerifiedPharmacy,
+  // requireVerifiedPharmacy,
   deleteInventory
 );
 

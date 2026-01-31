@@ -6,6 +6,21 @@ const Pharmacy = require('../models/Pharmacy');
 exports.createOrder = async (req, res) => {
     try {
         const { pharmacyId, medicineName, price } = req.body;
+
+        // 1. Check karo ki kya ye medicine stock mein hai?
+        const pharmacyInventory = await Inventory.find({ pharmacy: pharmacyId }).populate('medicine');
+        const inventoryItem = pharmacyInventory.find(item => 
+            item.medicine && item.medicine.name.toLowerCase() === medicineName.toLowerCase()
+        );
+
+        if (!inventoryItem || inventoryItem.stock <= 0) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Sorry, ye medicine abhi out of stock ho gayi hai!" 
+            });
+        }
+
+        // 2. Agar stock hai, tabhi order create karo
         const newOrder = new Order({
             user: req.user._id,
             pharmacy: pharmacyId, 
@@ -13,12 +28,25 @@ exports.createOrder = async (req, res) => {
             price,
             status: 'Pending'
         });
+
         await newOrder.save();
+
+        const populatedOrder = await Order.findById(newOrder._id).populate('user', 'name address');
+
+        // Socket trigger
+const io = req.app.get('socketio');
+io.to(pharmacyId).emit('new_order_alert', {
+  message: "Naya Order Aaya Hai!",
+  order: populatedOrder
+});
+
         res.status(201).json({ success: true, message: "Order placed successfully!" });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
 };
+
+
 
 // 2. Dashboard Stats
 exports.getPharmacyStats = async (req, res) => {
@@ -59,7 +87,7 @@ exports.getPharmacyOrders = async (req, res) => {
         if (!pharmacyProfile) return res.json({ success: true, orders: [] });
 
         const orders = await Order.find({ pharmacy: pharmacyProfile._id })
-            .populate('user', 'name phone') 
+            .populate('user', 'name phone address') 
             .sort({ createdAt: -1 });
 
         res.json({ success: true, orders });
@@ -74,7 +102,7 @@ exports.updateOrderStatus = async (req, res) => {
         const { orderId } = req.params;
         const { status } = req.body;
 
-        const order = await Order.findById(orderId);
+        const order = await Order.findById(orderId).populate('pharmacy', 'storeName' );
         if (!order) return res.status(404).json({ success: false, message: "Order not found" });
 
         if (status === 'Delivered') {
@@ -106,10 +134,33 @@ exports.updateOrderStatus = async (req, res) => {
         order.status = status;
         await order.save();
 
+        const io = req.app.get('socketio');
+        io.to(order.user.toString()).emit('order_status_update', {
+            orderId: order._id,
+            status: status,
+            message: `Apka order ${order.pharmacy.storeName} ne ${status} kar diya hai!`
+        });
+
+        
         res.json({ success: true, message: `Order marked as ${status}!` });
 
     } catch (err) {
         console.error("Update Error:", err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+
+
+// 5. User apne orders dekh sake
+exports.getUserOrders = async (req, res) => {
+    try {
+        const orders = await Order.find({ user: req.user._id })
+            .populate('pharmacy', 'storeName address phone')
+            .sort({ createdAt: -1 });
+
+        res.json({ success: true, orders });
+    } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
 };
