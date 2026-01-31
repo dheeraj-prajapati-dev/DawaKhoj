@@ -13,10 +13,9 @@ export default function Register() {
   });
   const navigate = useNavigate();
 
-  // 1. PHONE VALIDATION LOGIC YAHAN HAI 👇
+  // 1. PHONE VALIDATION: Sirf numbers aur max 10 digits
   const handlePhoneChange = (e) => {
     const value = e.target.value;
-    // Sirf numbers allow honge aur max 10 digits tak
     if (/^\d*$/.test(value) && value.length <= 10) {
       setFormData({ ...formData, phone: value });
     }
@@ -24,12 +23,20 @@ export default function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // 2. FORM SUBMIT HONE SE PEHLE CHECK KARO KI 10 DIGIT HAI YA NAHI
+
+    // 2. EMAIL VALIDATION: Check karega ki format sahi hai ya nahi
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      return toast.error('Kripya ek sahi email address bharein.');
+    }
+
+    // 3. PHONE LENGTH CHECK: Poore 10 digit hone chahiye
     if (formData.phone.length !== 10) {
-      return toast.error('Kripya 10 digit ka sahi mobile number bharein.');
+      return toast.error('Mobile number pure 10 digit ka hona chahiye.');
     }
 
     try {
+      // Backend URL jo aapne set ki hai
       await axios.post('https://dawakhoj.onrender.com/api/auth/register', formData);
       toast.success('Registration safal raha! Ab login karein.');
       setTimeout(() => navigate('/login'), 2000);
@@ -58,25 +65,23 @@ export default function Register() {
             </select>
           </div>
 
-          <input type="text" placeholder="Pura Naam" className="w-full p-4 bg-gray-50 rounded-2xl border" 
+          <input type="text" placeholder="Pura Naam" 
+            className="w-full p-4 bg-gray-50 rounded-2xl border focus:ring-2 focus:ring-blue-500 outline-none" 
             value={formData.name}
             onChange={e => setFormData({...formData, name: e.target.value})} required />
           
-          <input type="email" placeholder="Email Address" className="w-full p-4 bg-gray-50 rounded-2xl border" 
+          <input type="email" placeholder="Email Address" 
+            className="w-full p-4 bg-gray-50 rounded-2xl border focus:ring-2 focus:ring-blue-500 outline-none" 
             value={formData.email}
             onChange={e => setFormData({...formData, email: e.target.value})} required />
 
-          {/* 3. INPUT FIELD MEIN VALUE AUR ONCHANGE UPDATE KIYA 👇 */}
-          <input 
-            type="tel" 
-            placeholder="Mobile Number (10 Digits)" 
+          <input type="tel" placeholder="Mobile Number (10 Digits)" 
             className="w-full p-4 bg-gray-50 rounded-2xl border focus:ring-2 focus:ring-blue-500 outline-none" 
             value={formData.phone}
-            onChange={handlePhoneChange} 
-            required 
-          />
+            onChange={handlePhoneChange} required />
 
-          <input type="password" placeholder="Password" className="w-full p-4 bg-gray-50 rounded-2xl border" 
+          <input type="password" placeholder="Password" 
+            className="w-full p-4 bg-gray-50 rounded-2xl border focus:ring-2 focus:ring-blue-500 outline-none" 
             value={formData.password}
             onChange={e => setFormData({...formData, password: e.target.value})} required />
 
