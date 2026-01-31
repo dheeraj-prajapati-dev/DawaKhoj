@@ -9,14 +9,27 @@ export default function Register() {
     email: '', 
     phone: '', 
     password: '', 
-    role: 'patient' // Default role patient rakha hai
+    role: 'patient' 
   });
   const navigate = useNavigate();
 
+  // 1. PHONE VALIDATION LOGIC YAHAN HAI 👇
+  const handlePhoneChange = (e) => {
+    const value = e.target.value;
+    // Sirf numbers allow honge aur max 10 digits tak
+    if (/^\d*$/.test(value) && value.length <= 10) {
+      setFormData({ ...formData, phone: value });
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // 2. FORM SUBMIT HONE SE PEHLE CHECK KARO KI 10 DIGIT HAI YA NAHI
+    if (formData.phone.length !== 10) {
+      return toast.error('Kripya 10 digit ka sahi mobile number bharein.');
+    }
+
     try {
-      // Backend URL check karein (Postman wala hi hai)
       await axios.post('https://dawakhoj.onrender.com/api/auth/register', formData);
       toast.success('Registration safal raha! Ab login karein.');
       setTimeout(() => navigate('/login'), 2000);
@@ -33,7 +46,6 @@ export default function Register() {
         <p className="text-center text-gray-500 mb-6 font-medium">Naya Account Banayein</p>
         
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Role Selection - Postman ki tarah yahan se role jayega */}
           <div className="flex flex-col gap-1">
             <label className="text-xs font-bold text-gray-400 ml-1 uppercase">Account Type</label>
             <select 
@@ -43,20 +55,29 @@ export default function Register() {
             >
               <option value="patient">Patient (User) 👤</option>
               <option value="pharmacy">Pharmacy Owner 🏥</option>
-              {/* Admin ko hum register se nahi, seedha DB se banate hain safety ke liye */}
             </select>
           </div>
 
           <input type="text" placeholder="Pura Naam" className="w-full p-4 bg-gray-50 rounded-2xl border" 
+            value={formData.name}
             onChange={e => setFormData({...formData, name: e.target.value})} required />
           
           <input type="email" placeholder="Email Address" className="w-full p-4 bg-gray-50 rounded-2xl border" 
+            value={formData.email}
             onChange={e => setFormData({...formData, email: e.target.value})} required />
 
-          <input type="text" placeholder="Mobile Number (Mandatory)" className="w-full p-4 bg-gray-50 rounded-2xl border" 
-            onChange={e => setFormData({...formData, phone: e.target.value})} required />
+          {/* 3. INPUT FIELD MEIN VALUE AUR ONCHANGE UPDATE KIYA 👇 */}
+          <input 
+            type="tel" 
+            placeholder="Mobile Number (10 Digits)" 
+            className="w-full p-4 bg-gray-50 rounded-2xl border focus:ring-2 focus:ring-blue-500 outline-none" 
+            value={formData.phone}
+            onChange={handlePhoneChange} 
+            required 
+          />
 
           <input type="password" placeholder="Password" className="w-full p-4 bg-gray-50 rounded-2xl border" 
+            value={formData.password}
             onChange={e => setFormData({...formData, password: e.target.value})} required />
 
           <button type="submit" className="w-full bg-blue-600 text-white font-bold py-4 rounded-2xl shadow-lg hover:bg-blue-700 transition-all active:scale-95 mt-4">
