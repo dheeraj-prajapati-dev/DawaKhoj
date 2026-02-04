@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
-import { toast, Toaster } from "react-hot-toast"; // Toaster add kiya
+import { toast, Toaster } from "react-hot-toast";
 
 export default function PharmacyDashboard() {
   const [stats, setStats] = useState({
@@ -16,6 +16,14 @@ export default function PharmacyDashboard() {
   const [recentOrders, setRecentOrders] = useState([]);
   const navigate = useNavigate();
 
+  // 🔔 Bell Sound Logic (File ko 'public' folder mein bell.mp3 naam se rakho)
+  const playNotification = useCallback(() => {
+    const audio = new Audio("/bell.mp3"); // Direct public path
+    audio.play().catch(err => {
+      console.log("Browser blocked sound. Dashboard par ek baar click karein.", err);
+    });
+  }, []);
+
   const fetchData = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -27,47 +35,46 @@ export default function PharmacyDashboard() {
       ]);
 
       if (statsRes.data.success) {
-        // Stats update karein
         setStats(prev => ({ 
           ...prev,
           ...statsRes.data.stats, 
-          // Agar orders se ID mil rahi hai toh set karein
-          pharmacyId: ordersRes.data.orders[0]?.pharmacy || prev.pharmacyId 
+          pharmacyId: ordersRes.data.orders[0]?.pharmacy || statsRes.data.stats.pharmacyId || prev.pharmacyId 
         }));
       }
       if (ordersRes.data.success) {
         setRecentOrders(ordersRes.data.orders.slice(0, 5));
       }
     } catch (err) {
-      console.error("Error fetching dashboard data:", err);
+      console.error("Dashboard Fetch Error:", err);
     }
   };
 
   useEffect(() => {
     fetchData();
 
-    // 1. Live Socket Connection (Optimized for Render)
     const socket = io("https://dawakhoj.onrender.com", {
       transports: ["websocket", "polling"],
       withCredentials: true
     });
 
-    // 2. Room Join karne ka logic
     if (stats.pharmacyId) {
-      console.log("Joining Pharmacy Room:", stats.pharmacyId);
+      console.log("System Active: Joining Room ->", stats.pharmacyId);
       socket.emit("join_room", stats.pharmacyId);
     }
 
-    // 3. New Order Notification
+    // 🚀 Socket Alert with Sound & Refresh
     socket.on("new_order_alert", (data) => {
+      console.log("New Order! Playing sound...");
+      playNotification(); // 🔔 Sound trigger
+
       toast.success(`📦 ${data.message}`, {
-        duration: 6000,
+        duration: 8000,
         icon: '🚀',
+        style: { border: '2px solid #2563eb', padding: '16px', fontWeight: 'bold' }
       });
-      fetchData(); // Auto refresh stats
+      fetchData(); // Blink triggers automatically after state update
     });
 
-    // 4. Global Search Notification (Jo humne search controller mein banaya)
     socket.on("search_alert", (data) => {
       toast(data.message, {
         icon: '🔍',
@@ -80,7 +87,7 @@ export default function PharmacyDashboard() {
       socket.off("search_alert");
       socket.disconnect();
     };
-  }, [stats.pharmacyId]);
+  }, [stats.pharmacyId, playNotification]);
 
   const handleUpdateStatus = async (orderId, newStatus) => {
     try {
@@ -90,40 +97,44 @@ export default function PharmacyDashboard() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       if (res.data.success) {
-        toast.success(`Order marked as ${newStatus}`);
+        toast.success(`Order marked as ${newStatus} ✅`);
         fetchData();
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || "Update failed");
+      toast.error(err.response?.data?.message || "Failed");
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
+    <div className="min-h-screen bg-gray-100 p-6" onClick={() => console.log("User Interaction Detected")}>
       <Toaster position="top-right" reverseOrder={false} />
       
-      {/* Header Section */}
+      {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Pharmacy Dashboard</h1>
           <p className="text-sm text-gray-500">Real-time monitoring active ⚡</p>
         </div>
-        <button onClick={() => navigate("/pharmacy/inventory")} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all font-bold shadow-md">
-          Manage Inventory
-        </button>
+        <div className="flex gap-2">
+           <button onClick={playNotification} className="bg-gray-200 text-gray-700 px-3 py-2 rounded-lg text-xs font-bold hover:bg-gray-300 transition-all">
+            🔊 Test Sound
+          </button>
+          <button onClick={() => navigate("/pharmacy/inventory")} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all font-bold shadow-md">
+            Manage Inventory
+          </button>
+        </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats Cards with BLINK Feature */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
         <DashboardCard title="Total Medicines" value={stats.totalMedicines} />
         <DashboardCard title="Low Stock" value={stats.lowStock} warning={stats.lowStock > 0} />
         <DashboardCard title="Out of Stock" value={stats.outOfStock} danger={stats.outOfStock > 0} />
-        <DashboardCard title="Pending Orders" value={stats.pendingOrders} />
+        <DashboardCard title="Pending Orders" value={stats.pendingOrders} blink={stats.pendingOrders > 0} />
         <DashboardCard title="Today's Revenue" value={`₹ ${stats.revenue}`} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Orders Table */}
         <div className="lg:col-span-2 bg-white rounded-xl p-5 shadow border border-gray-100">
           <div className="flex justify-between items-center mb-4">
             <h2 className="font-semibold text-lg">Recent Pending Orders</h2>
@@ -143,70 +154,51 @@ export default function PharmacyDashboard() {
                   <tr key={order._id} className="border-t hover:bg-gray-50 transition-colors">
                     <td className="p-3">
                       <p className="font-bold text-gray-800">{order.user?.name || "Customer"}</p>
-                      <p className="text-[10px] text-blue-500 font-medium italic">
-                        📍 {order.user?.address?.city || "Location N/A"}
-                      </p>
+                      <p className="text-[10px] text-blue-500 font-medium italic">📍 {order.user?.address?.city || "Location N/A"}</p>
                     </td>
                     <td className="p-3 font-medium text-gray-700">{order.medicineName}</td>
                     <td className="p-3">
-                      <button 
-                        onClick={() => handleUpdateStatus(order._id, 'Delivered')}
-                        className="bg-green-100 text-green-700 px-3 py-1 rounded-md text-xs font-black hover:bg-green-200"
-                      >
-                        Mark Delivered
-                      </button>
+                      <button onClick={() => handleUpdateStatus(order._id, 'Delivered')} className="bg-green-100 text-green-700 px-3 py-1 rounded-md text-xs font-black hover:bg-green-200">Mark Delivered</button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            {recentOrders.filter(o => o.status === 'Pending').length === 0 && (
-                <p className="text-center py-10 text-gray-400 font-medium italic">No pending orders ✨</p>
-            )}
           </div>
         </div>
 
-        {/* Status & Tips */}
         <div className="space-y-6">
-            <div className="bg-white rounded-xl p-5 shadow border border-gray-100">
-                <h2 className="font-semibold text-lg mb-4 text-gray-800">System Status</h2>
-                <div className="flex items-center gap-3 bg-green-50 p-3 rounded-lg border border-green-100">
-                    <span className="h-3 w-3 rounded-full bg-green-500 animate-pulse"></span>
-                    <span className="text-sm font-bold text-green-700">Socket Connected</span>
-                </div>
+          <div className="bg-white rounded-xl p-5 shadow border border-gray-100">
+            <h2 className="font-semibold text-lg mb-4 text-gray-800">System Status</h2>
+            <div className="flex items-center gap-3 bg-green-50 p-3 rounded-lg border border-green-100">
+              <span className="h-3 w-3 rounded-full bg-green-500 animate-pulse"></span>
+              <span className="text-sm font-bold text-green-700">Live Connection Active</span>
             </div>
-            
-            <div className="bg-white rounded-xl p-5 shadow border-l-4 border-blue-500">
-                <h2 className="font-semibold text-md text-blue-800">Inventory Tip</h2>
-                <p className="text-xs text-gray-500 mt-2 leading-relaxed">
-                  Bhai, aapke <span className="font-bold text-orange-600">{stats.lowStock} items</span> low stock mein hain. Stock maintain rakho!
-                </p>
-            </div>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-function DashboardCard({ title, value, danger, warning }) {
+function DashboardCard({ title, value, danger, warning, blink }) {
   return (
     <div className={`bg-white rounded-xl p-5 shadow border-b-4 transition-all duration-300 ${
       danger ? 'border-red-500 bg-red-50' : 
       warning ? 'border-orange-500 bg-orange-50' : 
-      'border-transparent hover:border-blue-500'
+      blink ? 'border-blue-500 bg-blue-50 animate-pulse' : 
+      'border-transparent'
     }`}>
       <p className="text-xs text-gray-400 mb-1 uppercase font-black tracking-widest">{title}</p>
-      <h3 className={`text-3xl font-black ${
-        danger ? 'text-red-600' : 
-        warning ? 'text-orange-600' : 
-        'text-gray-800'
-      }`}>
+      <h3 className={`text-3xl font-black ${danger ? 'text-red-600' : warning ? 'text-orange-600' : blink ? 'text-blue-700' : 'text-gray-800'}`}>
         {value}
       </h3>
-      {warning && (
+      {(warning || blink) && (
         <div className="flex items-center gap-1 mt-2">
-            <span className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-ping"></span>
-            <p className="text-[10px] text-orange-600 font-bold italic underline">Refill Soon!</p>
+            <span className={`h-1.5 w-1.5 rounded-full ${warning ? 'bg-orange-500' : 'bg-blue-500'} animate-ping`}></span>
+            <p className={`text-[10px] font-bold italic underline ${warning ? 'text-orange-600' : 'text-blue-600'}`}>
+              {warning ? 'Refill Soon!' : 'New Orders Incoming!'}
+            </p>
         </div>
       )}
     </div>

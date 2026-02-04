@@ -1,5 +1,6 @@
 import Navbar from './components/Navbar';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import PharmacyRegister from './pages/PharmacyRegister';
@@ -22,6 +23,7 @@ import ScrollToTop from './components/ScrollToTop';
 function App() {
   return (
     <BrowserRouter>
+    <Toaster position="top-right" reverseOrder={false}/>
     <ScrollToTop />
       <div className="flex flex-col min-h-screen"> {/* Footer ko hamesha niche rakhne ke liye */}
         <Navbar />
@@ -51,6 +53,7 @@ function App() {
             <Route path="/pharmacy/dashboard" element={<PharmacyDashboard />} />
             <Route path="/pharmacy/inventory" element={<PharmacyInventory />} />
             <Route path="/pharmacy/orders" element={<PharmacyOrders />} />
+            
           </Routes>
         </main>
 
