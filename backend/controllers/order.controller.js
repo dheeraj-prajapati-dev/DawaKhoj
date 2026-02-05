@@ -7,7 +7,6 @@ exports.createOrder = async (req, res) => {
     try {
         const { pharmacyId, medicineName, price } = req.body;
 
-        // Inventory check (Regex use kiya taaki Case-sensitive issue na ho)
         const pharmacyInventory = await Inventory.find({ pharmacy: pharmacyId }).populate('medicine');
         const inventoryItem = pharmacyInventory.find(item => 
             item.medicine && item.medicine.name.toLowerCase() === medicineName.toLowerCase()
@@ -31,7 +30,6 @@ exports.createOrder = async (req, res) => {
         await newOrder.save();
         const populatedOrder = await Order.findById(newOrder._id).populate('user', 'name address phone');
 
-        // 🔥 Pharmacy ko Live Alert
         const io = req.app.get('socketio');
         io.to(pharmacyId.toString()).emit('new_order_alert', {
             message: "Naya Order Aaya Hai!",
@@ -77,7 +75,7 @@ exports.getPharmacyStats = async (req, res) => {
     }
 };
 
-// 3. Fetch All Orders
+// 3. Fetch All Orders (Pharmacy Side)
 exports.getPharmacyOrders = async (req, res) => {
     try {
         const pharmacyProfile = await Pharmacy.findOne({ owner: req.user._id });
@@ -93,7 +91,7 @@ exports.getPharmacyOrders = async (req, res) => {
     }
 };
 
-// 4. Update Status (Auto-Deduct Stock on Delivery + User Socket Alert)
+// 4. Update Status (Stock Deduction + Live Update)
 exports.updateOrderStatus = async (req, res) => {
     try {
         const { orderId } = req.params;
@@ -117,7 +115,6 @@ exports.updateOrderStatus = async (req, res) => {
         order.status = status;
         await order.save();
 
-        // 🔥 User ko Live Update
         const io = req.app.get('socketio');
         io.to(order.user.toString()).emit('order_status_update', {
             orderId: order._id,
@@ -138,6 +135,39 @@ exports.getUserOrders = async (req, res) => {
             .populate('pharmacy', 'storeName address phone')
             .sort({ createdAt: -1 });
         res.json({ success: true, orders });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+// 🔥 6. Rate Order (Naya Logic)
+exports.rateOrder = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const { rating } = req.body;
+
+        const order = await Order.findById(orderId);
+        if (!order) return res.status(404).json({ success: false, message: "Order not found" });
+        if (order.status !== 'Delivered') return res.status(400).json({ success: false, message: "Pehle order deliver hone dein!" });
+        if (order.isRated) return res.status(400).json({ success: false, message: "Already rated!" });
+
+        // Order Update
+        order.isRated = true;
+        order.rating = rating;
+        await order.save();
+
+        // Pharmacy ki Average Rating Update logic
+        const pId = order.pharmacy;
+        const allRatedOrders = await Order.find({ pharmacy: pId, isRated: true });
+        
+        const avgRating = allRatedOrders.reduce((acc, curr) => acc + curr.rating, 0) / allRatedOrders.length;
+
+        await Pharmacy.findByIdAndUpdate(pId, { 
+            rating: avgRating.toFixed(1), // Average nikala
+            numReviews: allRatedOrders.length // Total reviews count
+        });
+
+        res.json({ success: true, message: "Thank you for the rating!" });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }

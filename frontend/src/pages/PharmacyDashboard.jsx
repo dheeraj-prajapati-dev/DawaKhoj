@@ -16,11 +16,11 @@ export default function PharmacyDashboard() {
   const [recentOrders, setRecentOrders] = useState([]);
   const navigate = useNavigate();
 
-  // 🔔 Bell Sound Logic (File ko 'public' folder mein bell.mp3 naam se rakho)
+  // 🔔 Bell Sound Logic
   const playNotification = useCallback(() => {
-    const audio = new Audio("/bell.mp3"); // Direct public path
+    const audio = new Audio("/bell.mp3");
     audio.play().catch(err => {
-      console.log("Browser blocked sound. Dashboard par ek baar click karein.", err);
+      console.log("Audio play blocked. Click anywhere on the dashboard first.", err);
     });
   }, []);
 
@@ -42,7 +42,11 @@ export default function PharmacyDashboard() {
         }));
       }
       if (ordersRes.data.success) {
-        setRecentOrders(ordersRes.data.orders.slice(0, 5));
+        // Sirf wahi orders dikhayenge jo abhi process mein hain (Pending ya Accepted)
+        const activeOrders = ordersRes.data.orders.filter(
+            o => o.status === 'Pending' || o.status === 'Accepted'
+        );
+        setRecentOrders(activeOrders.slice(0, 8)); 
       }
     } catch (err) {
       console.error("Dashboard Fetch Error:", err);
@@ -58,21 +62,17 @@ export default function PharmacyDashboard() {
     });
 
     if (stats.pharmacyId) {
-      console.log("System Active: Joining Room ->", stats.pharmacyId);
       socket.emit("join_room", stats.pharmacyId);
     }
 
-    // 🚀 Socket Alert with Sound & Refresh
     socket.on("new_order_alert", (data) => {
-      console.log("New Order! Playing sound...");
-      playNotification(); // 🔔 Sound trigger
-
+      playNotification();
       toast.success(`📦 ${data.message}`, {
         duration: 8000,
         icon: '🚀',
         style: { border: '2px solid #2563eb', padding: '16px', fontWeight: 'bold' }
       });
-      fetchData(); // Blink triggers automatically after state update
+      fetchData(); 
     });
 
     socket.on("search_alert", (data) => {
@@ -97,16 +97,16 @@ export default function PharmacyDashboard() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       if (res.data.success) {
-        toast.success(`Order marked as ${newStatus} ✅`);
+        toast.success(`Order ${newStatus} ✅`);
         fetchData();
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed");
+      toast.error(err.response?.data?.message || "Update Failed");
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6" onClick={() => console.log("User Interaction Detected")}>
+    <div className="min-h-screen bg-gray-100 p-6" onClick={() => console.log("Audio Unlocked")}>
       <Toaster position="top-right" reverseOrder={false} />
       
       {/* Header */}
@@ -116,7 +116,7 @@ export default function PharmacyDashboard() {
           <p className="text-sm text-gray-500">Real-time monitoring active ⚡</p>
         </div>
         <div className="flex gap-2">
-           <button onClick={playNotification} className="bg-gray-200 text-gray-700 px-3 py-2 rounded-lg text-xs font-bold hover:bg-gray-300 transition-all">
+           <button onClick={playNotification} className="bg-white border text-gray-700 px-3 py-2 rounded-lg text-xs font-bold hover:bg-gray-50 transition-all">
             🔊 Test Sound
           </button>
           <button onClick={() => navigate("/pharmacy/inventory")} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all font-bold shadow-md">
@@ -125,7 +125,7 @@ export default function PharmacyDashboard() {
         </div>
       </div>
 
-      {/* Stats Cards with BLINK Feature */}
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
         <DashboardCard title="Total Medicines" value={stats.totalMedicines} />
         <DashboardCard title="Low Stock" value={stats.lowStock} warning={stats.lowStock > 0} />
@@ -137,8 +137,8 @@ export default function PharmacyDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-white rounded-xl p-5 shadow border border-gray-100">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="font-semibold text-lg">Recent Pending Orders</h2>
-            <button onClick={() => navigate("/pharmacy/orders")} className="text-blue-600 text-sm font-bold hover:underline">View All</button>
+            <h2 className="font-semibold text-lg text-gray-800">Quick Actions (Pending & Accepted)</h2>
+            <button onClick={() => navigate("/pharmacy/orders")} className="text-blue-600 text-sm font-bold hover:underline">View All History</button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
@@ -150,20 +150,49 @@ export default function PharmacyDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {recentOrders.filter(o => o.status === 'Pending').map(order => (
+                {recentOrders.map(order => (
                   <tr key={order._id} className="border-t hover:bg-gray-50 transition-colors">
                     <td className="p-3">
                       <p className="font-bold text-gray-800">{order.user?.name || "Customer"}</p>
-                      <p className="text-[10px] text-blue-500 font-medium italic">📍 {order.user?.address?.city || "Location N/A"}</p>
+                      <p className="text-[10px] text-blue-500 font-medium">📍 {order.user?.address?.city || "Silvassa"}</p>
                     </td>
                     <td className="p-3 font-medium text-gray-700">{order.medicineName}</td>
                     <td className="p-3">
-                      <button onClick={() => handleUpdateStatus(order._id, 'Delivered')} className="bg-green-100 text-green-700 px-3 py-1 rounded-md text-xs font-black hover:bg-green-200">Mark Delivered</button>
+                      <div className="flex gap-2">
+                        {order.status === 'Pending' ? (
+                          <>
+                            <button 
+                              onClick={() => handleUpdateStatus(order._id, 'Accepted')}
+                              className="bg-blue-600 text-white px-3 py-1 rounded-md text-[11px] font-black hover:bg-blue-700 shadow-sm"
+                            >
+                              ACCEPT
+                            </button>
+                            <button 
+                              onClick={() => handleUpdateStatus(order._id, 'Rejected')}
+                              className="bg-red-50 text-red-600 px-3 py-1 rounded-md text-[11px] font-black hover:bg-red-100"
+                            >
+                              REJECT
+                            </button>
+                          </>
+                        ) : (
+                          <button 
+                            onClick={() => handleUpdateStatus(order._id, 'Delivered')}
+                            className="bg-green-600 text-white px-3 py-1 rounded-md text-[11px] font-black hover:bg-green-700 shadow-md animate-pulse"
+                          >
+                            MARK DELIVERED
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            {recentOrders.length === 0 && (
+                <div className="text-center py-10">
+                    <p className="text-gray-400 font-medium italic">No active orders to process ✨</p>
+                </div>
+            )}
           </div>
         </div>
 
@@ -174,6 +203,13 @@ export default function PharmacyDashboard() {
               <span className="h-3 w-3 rounded-full bg-green-500 animate-pulse"></span>
               <span className="text-sm font-bold text-green-700">Live Connection Active</span>
             </div>
+          </div>
+          
+          <div className="bg-blue-600 rounded-xl p-5 shadow-lg text-white">
+             <h3 className="font-bold text-sm uppercase opacity-80">Quick Tip</h3>
+             <p className="text-xs mt-2 leading-relaxed">
+               Bhai, orders ko fast "Accept" karein taaki customer ka bharosa bana rahe! 🚀
+             </p>
           </div>
         </div>
       </div>

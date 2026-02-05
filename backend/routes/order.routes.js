@@ -5,15 +5,17 @@ const {
     getPharmacyStats, 
     getPharmacyOrders, 
     updateOrderStatus,
-    getUserOrders // 👈 Ye naya function add kiya
+    getUserOrders,
+    rateOrder // 👈 Naya function import kiya
 } = require('../controllers/order.controller');
 const { protect, authorizeRoles } = require('../middlewares/authMiddleware');
 
-// 1. User Routes (Koi bhi logged-in user)
+// 1. User Routes
 router.post('/create', protect, createOrder);
-router.get('/my-orders', protect, getUserOrders); // User apne orders dekh sake
+router.get('/my-orders', protect, getUserOrders);
+router.post('/rate/:orderId', protect, rateOrder); // 👈 Naya Rating Route
 
-// 2. Pharmacy Routes (Sirf Pharmacy owner ke liye)
+// 2. Pharmacy Routes
 router.get('/stats', protect, authorizeRoles('pharmacy'), getPharmacyStats);
 router.get('/pharmacy-orders', protect, authorizeRoles('pharmacy'), getPharmacyOrders);
 router.put('/status/:orderId', protect, authorizeRoles('pharmacy'), updateOrderStatus);
