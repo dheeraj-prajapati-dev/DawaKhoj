@@ -13,12 +13,20 @@ connectDB();
 const app = express();
 const server = http.createServer(app); 
 
+// ====== ALLOWED ORIGINS ======
+// Naya domain dawakhoj.in yahan add kiya hai
+const allowedOrigins = [
+  "https://dawakhoj.in", 
+  "https://www.dawakhoj.in", 
+  "https://dawa-khoj.vercel.app", 
+  "http://localhost:5173"
+];
+
 // ====== SOCKET SETUP ======
 const io = new Server(server, {
   cors: {
-    // Frontend URLs ko yahan bhi update kiya taaki socket connect ho sake
-    origin: ["https://dawa-khoj.vercel.app", "http://localhost:5173"], 
-    methods: ["GET", "POST", "PUT"],
+    origin: allowedOrigins, 
+    methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true
   }
 });
@@ -27,7 +35,7 @@ io.on('connection', (socket) => {
   console.log('⚡ Connected:', socket.id);
   socket.on('join_room', (roomId) => {
     socket.join(roomId);
-    console.log(`✅ User/Pharmacy Joined Room: ${roomId} `);
+    console.log(`✅ User/Pharmacy Joined Room: ${roomId}`);
   });
   socket.on('disconnect', () => console.log('❌ Disconnected'));
 });
@@ -38,9 +46,16 @@ app.set('socketio', io);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// FIX: cors(cors(...)) ko hata kar simple app.use(cors(...)) kiya
+// Optimized CORS for API
 app.use(cors({
-  origin: ["https://dawa-khoj.vercel.app", "http://localhost:5173"],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('CORS block: Domain not allowed by DawaKhoj'));
+    }
+  },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"]
@@ -63,7 +78,7 @@ app.get('/api/admin-test', protect, authorizeRoles('admin'), (req, res) => {
   res.json({ message: 'Welcome Admin 👑', user: req.user });
 });
 
-app.get('/', (req, res) => res.send('Welcome to DawaKhoj API'));
+app.get('/', (req, res) => res.send('Welcome to DawaKhoj API (Production Mode) 🚀'));
 
 // ====== SERVER START ======
 const PORT = process.env.PORT || 5000;
