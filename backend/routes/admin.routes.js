@@ -5,7 +5,8 @@ const router = express.Router();
 const { protect, authorizeRoles } = require('../middlewares/authMiddleware');
 const {
   getAllPharmacies, // Ye wahi function hai jo ab stats + pharmacies dono bhejega
-  approvePharmacy
+  approvePharmacy,
+  deletePharmacy
 } = require('../controllers/admin.controller');
 
 // ✅ GET ALL PHARMACIES & STATS
@@ -25,5 +26,7 @@ router.put(
   authorizeRoles('admin'),
   approvePharmacy
 );
+
+router.delete('/pharmacy/:id', protect, authorizeRoles('admin'), deletePharmacy);
 
 module.exports = router;
