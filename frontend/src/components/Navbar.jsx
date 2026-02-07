@@ -1,8 +1,41 @@
 import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 
 export default function Navbar() {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user'));
+
+  // --- PWA INSTALL LOGIC START ---
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [showInstallBtn, setShowInstallBtn] = useState(false);
+
+  useEffect(() => {
+    // Browser jab install prompt ready karta hai
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowInstallBtn(true);
+    });
+
+    // Install hone ke baad button chhupane ke liye
+    window.addEventListener('appinstalled', () => {
+      setShowInstallBtn(false);
+      setDeferredPrompt(null);
+      console.log('DawaKhoj+ Installed Successfully! 🎉');
+    });
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setShowInstallBtn(false);
+      }
+      setDeferredPrompt(null);
+    }
+  };
+  // --- PWA INSTALL LOGIC END ---
 
   const handleLogout = () => {
     localStorage.clear();
@@ -23,7 +56,17 @@ export default function Navbar() {
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 md:gap-4">
+        {/* ✨ PWA INSTALL BUTTON ✨ */}
+        {showInstallBtn && (
+          <button 
+            onClick={handleInstallClick}
+            className="bg-yellow-400 text-blue-900 px-3 py-1.5 md:px-4 md:py-2 rounded-lg font-black text-[10px] md:text-xs shadow-md hover:bg-yellow-300 transition-all animate-pulse flex items-center gap-1 border-2 border-white"
+          >
+            <span className="hidden md:inline">INSTALL</span> APP 📲
+          </button>
+        )}
+
         {user ? (
           <>
             {user.role === 'admin' && (
@@ -38,7 +81,6 @@ export default function Navbar() {
               </Link>
             )}
 
-            {/* Role 'patient' ke liye check */}
             {(user.role === 'user' || user.role === 'patient') && (
               <Link to="/my-orders" className="text-gray-700 font-bold text-sm hover:text-blue-600 px-2">
                 My Orders
@@ -47,7 +89,7 @@ export default function Navbar() {
             
             <button 
               onClick={handleLogout}
-              className="ml-2 text-gray-400 font-bold text-sm hover:text-red-500 transition border-l pl-4"
+              className="ml-1 md:ml-2 text-gray-400 font-bold text-sm hover:text-red-500 transition border-l pl-3 md:pl-4"
             >
               Logout
             </button>
