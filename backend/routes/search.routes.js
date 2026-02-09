@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
 
-const { searchMedicinePrices } = require('../controllers/search.controller');
+const { findNearestPharmacies } = require('../controllers/geoSearch.controller');
 
 // 🔍 Price comparison search
-router.get('/medicine', searchMedicinePrices);
+router.get('/medicine', findNearestPharmacies);
 
 module.exports = router;

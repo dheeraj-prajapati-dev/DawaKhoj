@@ -13,6 +13,11 @@ const MyOrders = () => {
   const [selectedStars, setSelectedStars] = useState(5);
   const navigate = useNavigate();
 
+  // 🌐 Dynamic URL: Local aur Live dono ke liye
+  const BASE_URL = window.location.hostname === 'localhost' 
+    ? 'http://localhost:5000' 
+    : 'https://dawakhoj.onrender.com';
+
   const sortOrders = useCallback((orderList) => {
     const priority = { 'Pending': 1, 'Accepted': 2, 'Out for Delivery': 3, 'Delivered': 4, 'Rejected': 5 };
     return [...orderList].sort((a, b) => {
@@ -26,7 +31,7 @@ const MyOrders = () => {
   const fetchMyOrders = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get('https://dawakhoj.onrender.com/api/orders/my-orders', {
+      const res = await axios.get(`${BASE_URL}/api/orders/my-orders`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data.success) {
@@ -35,20 +40,21 @@ const MyOrders = () => {
       setLoading(false);
     } catch (err) {
       setLoading(false);
+      console.error("Fetch error:", err);
     }
   };
 
   const submitRating = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.post(`https://dawakhoj.onrender.com/api/orders/rate/${ratingModal.orderId}`, 
+      const res = await axios.post(`${BASE_URL}/api/orders/rate/${ratingModal.orderId}`, 
         { rating: selectedStars },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       if (res.data.success) {
         toast.success("Thank you for your rating! ⭐");
         setRatingModal({ show: false, orderId: null });
-        fetchMyOrders(); // Refresh to hide the rate button
+        fetchMyOrders(); 
       }
     } catch (err) {
       toast.error(err.response?.data?.message || "Rating failed");
@@ -56,21 +62,58 @@ const MyOrders = () => {
   };
 
   useEffect(() => {
-    const socket = io('https://dawakhoj.onrender.com', { transports: ['websocket', 'polling'] });
+    const socket = io(BASE_URL, { transports: ['websocket', 'polling'] });
     fetchMyOrders();
+    
     const userData = localStorage.getItem('user');
     if (userData) {
       const user = JSON.parse(userData);
       socket.emit('join_room', user._id || user.id); 
+      
       socket.on('order_status_update', (data) => {
         toast.success(data.message, { icon: '💊', duration: 6000 });
         setOrders(prev => sortOrders(prev.map(o => o._id === data.orderId ? { ...o, status: data.status } : o)));
       });
     }
-    return () => { socket.off('order_status_update'); socket.disconnect(); };
-  }, [sortOrders]);
 
-  const downloadInvoice = (order) => { /* Invoice logic same as before... */ };
+    return () => { 
+      socket.off('order_status_update'); 
+      socket.disconnect(); 
+    };
+  }, [sortOrders, BASE_URL]);
+
+  // 📄 Professional Invoice Logic
+  const downloadInvoice = (order) => {
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFontSize(20);
+    doc.setTextColor(37, 99, 235); // Blue color
+    doc.text("DawaKhoj+ Receipt", 14, 22);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Order ID: ${order._id}`, 14, 30);
+    doc.text(`Date: ${new Date(order.createdAt).toLocaleDateString()}`, 14, 35);
+
+    // Table
+    autoTable(doc, {
+      startY: 45,
+      head: [['Medicine Name', 'Pharmacy', 'Status', 'Price']],
+      body: [[
+        order.medicineName, 
+        order.pharmacy?.storeName || 'Pharmacy', 
+        order.status, 
+        `Rs. ${order.price}`
+      ]],
+      theme: 'grid',
+      headStyles: { fillStyle: [37, 99, 235] }
+    });
+
+    doc.text("Thank you for using DawaKhoj+ for your health needs!", 14, doc.lastAutoTable.finalY + 10);
+    doc.save(`Invoice_${order._id.slice(-6)}.pdf`);
+    toast.success("Downloading Invoice...");
+  };
 
   if (loading) return (
     <div className="h-screen flex flex-col items-center justify-center bg-gray-50">
@@ -95,7 +138,10 @@ const MyOrders = () => {
               <div className="flex items-center gap-3 mb-2">
                 <h3 className="font-black text-2xl text-gray-800 tracking-tight">{order.medicineName}</h3>
                 {['Pending', 'Accepted', 'Out for Delivery'].includes(order.status) && (
-                  <span className="flex h-3 w-3"><span className="animate-ping absolute inline-flex h-3 w-3 rounded-full bg-blue-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span></span>
+                  <span className="flex h-3 w-3 relative">
+                    <span className="animate-ping absolute inline-flex h-3 w-3 rounded-full bg-blue-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+                  </span>
                 )}
               </div>
               <p className="text-sm text-blue-600 font-black flex items-center gap-2 uppercase tracking-widest mb-4">
@@ -109,7 +155,7 @@ const MyOrders = () => {
                     {!order.isRated ? (
                       <button onClick={() => setRatingModal({ show: true, orderId: order._id })} className="text-[10px] bg-yellow-400 text-black px-5 py-2.5 rounded-2xl font-black uppercase tracking-widest hover:bg-yellow-500 transition-all flex items-center gap-2 shadow-lg">Rate ⭐</button>
                     ) : (
-                      <span className="text-[10px] bg-green-100 text-green-700 px-5 py-2.5 rounded-2xl font-black uppercase tracking-widest">Rated {order.rating}★</span>
+                      <span className="text-[10px] bg-green-100 text-green-700 px-5 py-2.5 rounded-2xl font-black uppercase tracking-widest flex items-center">Rated {order.rating}★</span>
                     )}
                   </>
                 )}
@@ -118,11 +164,17 @@ const MyOrders = () => {
 
             <div className="flex flex-col items-end gap-3 w-full md:w-auto border-t md:border-t-0 pt-4 md:pt-0">
               <p className="font-black text-3xl text-gray-900 tracking-tighter">₹{order.price}</p>
-              <span className={`text-[11px] font-black px-6 py-2.5 rounded-2xl uppercase tracking-[0.15em] border-2 ${order.status === 'Delivered' ? 'bg-green-50 text-green-700 border-green-100' : order.status === 'Rejected' ? 'bg-red-50 text-red-700 border-red-100' : 'bg-yellow-50 text-yellow-700 border-yellow-100 animate-pulse'}`}>{order.status}</span>
+              <span className={`text-[11px] font-black px-6 py-2.5 rounded-2xl uppercase tracking-[0.15em] border-2 ${
+                order.status === 'Delivered' ? 'bg-green-50 text-green-700 border-green-100' : 
+                order.status === 'Rejected' ? 'bg-red-50 text-red-700 border-red-100' : 
+                'bg-yellow-50 text-yellow-700 border-yellow-100 animate-pulse'
+              }`}>{order.status}</span>
             </div>
           </div>
         )) : (
-          <div className="text-center py-32 bg-white rounded-[3rem] border-4 border-dashed border-gray-100"><p className="text-gray-300 font-black text-3xl italic tracking-tighter">No orders yet! 🛒</p></div>
+          <div className="text-center py-32 bg-white rounded-[3rem] border-4 border-dashed border-gray-100">
+            <p className="text-gray-300 font-black text-3xl italic tracking-tighter">No orders yet! 🛒</p>
+          </div>
         )}
       </div>
 

@@ -67,7 +67,7 @@ app.use('/api/pharmacy', require('./routes/pharmacy.routes'));
 app.use('/api/inventory', require('./routes/inventory.routes'));
 app.use('/api/search', require('./routes/search.routes'));
 app.use('/api/orders', require('./routes/order.routes'));
-app.use('/api/geo-search', require('./routes/geoSearch.routes'));
+// app.use('/api/geo-search', require('./routes/geoSearch.routes'));
 app.use('/api/prescription', require('./routes/prescription.routes'));
 app.use('/api/flow', require('./routes/flow.routes'));
 app.use('/api/admin', require('./routes/admin.routes'));
