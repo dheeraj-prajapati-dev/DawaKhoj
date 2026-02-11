@@ -3,6 +3,7 @@ import axios from 'axios';
 
 const AuthContext = createContext();
 
+// 🔥 Yeh instance automatic cookies (withCredentials) handle karega
 export const API = axios.create({
   baseURL: 'https://dawakhoj.onrender.com/api',
   withCredentials: true,
@@ -18,7 +19,6 @@ export const AuthProvider = ({ children }) => {
       (error) => {
         if (error.response && error.response.status === 401) {
           setUser(null);
-          // Optional: Clear any local user state if stored elsewhere
         }
         return Promise.reject(error);
       }
@@ -34,7 +34,6 @@ export const AuthProvider = ({ children }) => {
           setUser(res.data.user);
         }
       } catch (err) {
-        console.warn("Session check: No active session.");
         setUser(null);
       } finally {
         setLoading(false);

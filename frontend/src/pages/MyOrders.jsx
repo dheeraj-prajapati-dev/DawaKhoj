@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import axios from 'axios';
+import { API } from '../context/AuthContext'; // 🔥 API instance use karein
 import { io } from 'socket.io-client'; 
 import { toast, Toaster } from 'react-hot-toast';
 import jsPDF from 'jspdf';
@@ -13,8 +13,8 @@ const MyOrders = () => {
   const [selectedStars, setSelectedStars] = useState(5);
   const navigate = useNavigate();
 
-  // 🌐 Dynamic URL: Local aur Live dono ke liye
-  const BASE_URL = window.location.hostname === 'localhost' 
+  // 🌐 Dynamic URL for Socket connection
+  const SOCKET_URL = window.location.hostname === 'localhost' 
     ? 'http://localhost:5000' 
     : 'https://dawakhoj.onrender.com';
 
@@ -30,26 +30,28 @@ const MyOrders = () => {
 
   const fetchMyOrders = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const res = await axios.get(`${BASE_URL}/api/orders/my-orders`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      setLoading(true);
+      // 🔥 API use karne se cookies automatic jayengi
+      const res = await API.get('/orders/my-orders');
       if (res.data.success) {
         setOrders(sortOrders(res.data.orders));
       }
-      setLoading(false);
     } catch (err) {
-      setLoading(false);
       console.error("Fetch error:", err);
+      if (err.response?.status === 401) {
+        toast.error("Session expired. Please login again.");
+        navigate('/login');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
   const submitRating = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const res = await axios.post(`${BASE_URL}/api/orders/rate/${ratingModal.orderId}`, 
-        { rating: selectedStars },
-        { headers: { Authorization: `Bearer ${token}` } }
+      // 🔥 API instance use karein
+      const res = await API.post(`/orders/rate/${ratingModal.orderId}`, 
+        { rating: selectedStars }
       );
       if (res.data.success) {
         toast.success("Thank you for your rating! ⭐");
@@ -62,9 +64,14 @@ const MyOrders = () => {
   };
 
   useEffect(() => {
-    const socket = io(BASE_URL, { transports: ['websocket', 'polling'] });
+    const socket = io(SOCKET_URL, { 
+      transports: ['websocket', 'polling'],
+      withCredentials: true // 🔥 Cookies support for socket
+    });
+
     fetchMyOrders();
     
+    // User data ke liye hum Context ya local storage use kar sakte hain
     const userData = localStorage.getItem('user');
     if (userData) {
       const user = JSON.parse(userData);
@@ -80,15 +87,14 @@ const MyOrders = () => {
       socket.off('order_status_update'); 
       socket.disconnect(); 
     };
-  }, [sortOrders, BASE_URL]);
+  }, [sortOrders, SOCKET_URL]);
 
   // 📄 Professional Invoice Logic
   const downloadInvoice = (order) => {
     const doc = new jsPDF();
     
-    // Header
     doc.setFontSize(20);
-    doc.setTextColor(37, 99, 235); // Blue color
+    doc.setTextColor(37, 99, 235);
     doc.text("DawaKhoj+ Receipt", 14, 22);
     
     doc.setFontSize(10);
@@ -96,7 +102,6 @@ const MyOrders = () => {
     doc.text(`Order ID: ${order._id}`, 14, 30);
     doc.text(`Date: ${new Date(order.createdAt).toLocaleDateString()}`, 14, 35);
 
-    // Table
     autoTable(doc, {
       startY: 45,
       head: [['Medicine Name', 'Pharmacy', 'Status', 'Price']],
@@ -107,7 +112,7 @@ const MyOrders = () => {
         `Rs. ${order.price}`
       ]],
       theme: 'grid',
-      headStyles: { fillStyle: [37, 99, 235] }
+      headStyles: { fillColor: [37, 99, 235] }
     });
 
     doc.text("Thank you for using DawaKhoj+ for your health needs!", 14, doc.lastAutoTable.finalY + 10);

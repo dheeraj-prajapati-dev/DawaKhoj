@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import axios from 'axios';
+import { API } from '../context/AuthContext'; // 🔥 API use kar rahe hain
 import { toast, Toaster } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 
@@ -12,10 +12,6 @@ const MedicineSearch = () => {
   const [showModal, setShowModal] = useState(false);
   const [lastOrder, setLastOrder] = useState(null);
   const navigate = useNavigate();
-
-  const BASE_URL = window.location.hostname === 'localhost' 
-    ? 'http://localhost:5000' 
-    : 'https://dawakhoj.onrender.com';
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -32,15 +28,15 @@ const MedicineSearch = () => {
   }, []);
 
   const performSearch = async () => {
-    if (query.trim().length <= 2) {
+    if (query.trim().length <= 2 || !userCoords) {
       setResults([]);
       return;
     }
-    if (!userCoords) return;
 
     setLoading(true);
     try {
-      const res = await axios.get(`${BASE_URL}/api/search/medicine`, {
+      // 🔥 BASE_URL ki zaroorat nahi, API instance mein set hai
+      const res = await API.get('/search/medicine', {
         params: { 
           q: query,
           lat: userCoords.lat,
@@ -80,20 +76,20 @@ const MedicineSearch = () => {
 
   const handleOrder = async (item) => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) return toast.error("Please login first!");
-      const res = await axios.post(`${BASE_URL}/api/orders/create`, {
+      // 🔥 Cookies automatic jayengi, localStorage header ki zaroorat nahi
+      const res = await API.post('/orders/create', {
         pharmacyId: item.pharmacyId,
         medicineName: item.medicineName,
         price: item.price
-      }, { headers: { Authorization: `Bearer ${token}` } });
+      });
 
       if (res.data.success) {
         setLastOrder(item);
         setShowModal(true);
       }
     } catch (err) {
-      toast.error("Order failed");
+      const msg = err.response?.data?.message || "Order failed";
+      toast.error(msg === "Please login first!" ? "Aap login nahi hain!" : msg);
     }
   };
 
@@ -151,10 +147,10 @@ const MedicineSearch = () => {
                     <h3 className="font-black text-3xl text-gray-800 italic uppercase">{item.medicineName}</h3>
                     <p className="text-blue-600 font-black text-xs uppercase">🏪 {item.pharmacy}</p>
                     <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">
-  📍 { (typeof item.distance === 'number' && item.distance >= 0) 
-       ? `APPROX. ${item.distance} KM AWAY` 
-       : 'DISTANCE NOT AVAILABLE' }
-</p>
+                      📍 { (typeof item.distance === 'number' && item.distance >= 0) 
+                        ? `APPROX. ${item.distance.toFixed(1)} KM AWAY` 
+                        : 'DISTANCE NOT AVAILABLE' }
+                    </p>
                     <div className="flex gap-2 mt-6">
                       <button onClick={() => handleOrder(item)} disabled={item.stock === 0} className={`px-8 py-3 rounded-2xl text-[10px] font-black tracking-widest ${item.stock > 0 ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>
                         {item.stock > 0 ? 'ORDER NOW ⚡' : 'OUT OF STOCK'}
