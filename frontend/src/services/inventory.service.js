@@ -1,16 +1,9 @@
-import axios from 'axios';
-import { authHeader } from '../utils/authHeader';
+import api from './api';
 
-const API = 'https://dawakhoj.onrender.com/api/inventory';
+export const getMyInventory = () => api.get('/inventory/my');
 
-export const getMyInventory = () =>
-  axios.get(`${API}/my`, { headers: authHeader() });
+export const addInventory = (data) => api.post('/inventory/add', data);
 
-export const addInventory = (data) =>
-  axios.post(`${API}/add`, data, { headers: authHeader() });
+export const updateInventory = (id, data) => api.put(`/inventory/update/${id}`, data);
 
-export const updateInventory = (id, data) =>
-  axios.put(`${API}/update/${id}`, data, { headers: authHeader() });
-
-export const deleteInventory = (id) =>
-  axios.delete(`${API}/delete/${id}`, { headers: authHeader() });
+export const deleteInventory = (id) => api.delete(`/inventory/delete/${id}`);

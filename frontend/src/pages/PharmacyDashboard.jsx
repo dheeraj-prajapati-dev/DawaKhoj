@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
 import { toast, Toaster } from "react-hot-toast";
+import { API } from "../context/AuthContext"; // 🔥 Cookie-based API instance
 
 export default function PharmacyDashboard() {
   const [stats, setStats] = useState({
@@ -26,23 +26,22 @@ export default function PharmacyDashboard() {
 
   const fetchData = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const headers = { Authorization: `Bearer ${token}` };
-
+      // 🔥 Headers ki zarurat nahi, API instance cookies handle karega
       const [statsRes, ordersRes] = await Promise.all([
-        axios.get("https://dawakhoj.onrender.com/api/orders/stats", { headers }),
-        axios.get("https://dawakhoj.onrender.com/api/orders/pharmacy-orders", { headers })
+        API.get("/orders/stats"),
+        API.get("/orders/pharmacy-orders")
       ]);
 
       if (statsRes.data.success) {
         setStats(prev => ({ 
           ...prev,
           ...statsRes.data.stats, 
-          pharmacyId: ordersRes.data.orders[0]?.pharmacy || statsRes.data.stats.pharmacyId || prev.pharmacyId 
+          pharmacyId: ordersRes.data.orders?.[0]?.pharmacy || statsRes.data.stats.pharmacyId || prev.pharmacyId 
         }));
       }
+
       if (ordersRes.data.success) {
-        // Sirf wahi orders dikhayenge jo abhi process mein hain (Pending ya Accepted)
+        // Active orders: Pending ya Accepted
         const activeOrders = ordersRes.data.orders.filter(
             o => o.status === 'Pending' || o.status === 'Accepted'
         );
@@ -50,12 +49,16 @@ export default function PharmacyDashboard() {
       }
     } catch (err) {
       console.error("Dashboard Fetch Error:", err);
+      if (err.response?.status === 401) {
+        toast.error("Session expired. Please login again.");
+      }
     }
   };
 
   useEffect(() => {
     fetchData();
 
+    // Socket Connection with credentials for cookies
     const socket = io("https://dawakhoj.onrender.com", {
       transports: ["websocket", "polling"],
       withCredentials: true
@@ -91,11 +94,7 @@ export default function PharmacyDashboard() {
 
   const handleUpdateStatus = async (orderId, newStatus) => {
     try {
-      const token = localStorage.getItem("token");
-      const res = await axios.put(`https://dawakhoj.onrender.com/api/orders/status/${orderId}`, 
-        { status: newStatus }, 
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await API.put(`/orders/status/${orderId}`, { status: newStatus });
       if (res.data.success) {
         toast.success(`Order ${newStatus} ✅`);
         fetchData();
@@ -106,18 +105,18 @@ export default function PharmacyDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6" onClick={() => console.log("Audio Unlocked")}>
+    <div className="min-h-screen bg-gray-100 p-6" onClick={() => console.log("Dashboard Active")}>
       <Toaster position="top-right" reverseOrder={false} />
       
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Pharmacy Dashboard</h1>
+          <h1 className="text-2xl font-bold text-gray-800 tracking-tight">Pharmacy Dashboard 🏥</h1>
           <p className="text-sm text-gray-500">Real-time monitoring active ⚡</p>
         </div>
         <div className="flex gap-2">
-           <button onClick={playNotification} className="bg-white border text-gray-700 px-3 py-2 rounded-lg text-xs font-bold hover:bg-gray-50 transition-all">
-            🔊 Test Sound
+           <button onClick={playNotification} className="bg-white border text-gray-700 px-3 py-2 rounded-lg text-xs font-bold hover:bg-gray-50 transition-all shadow-sm">
+             🔊 Test Sound
           </button>
           <button onClick={() => navigate("/pharmacy/inventory")} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all font-bold shadow-md">
             Manage Inventory
@@ -131,45 +130,46 @@ export default function PharmacyDashboard() {
         <DashboardCard title="Low Stock" value={stats.lowStock} warning={stats.lowStock > 0} />
         <DashboardCard title="Out of Stock" value={stats.outOfStock} danger={stats.outOfStock > 0} />
         <DashboardCard title="Pending Orders" value={stats.pendingOrders} blink={stats.pendingOrders > 0} />
-        <DashboardCard title="Today's Revenue" value={`₹ ${stats.revenue}`} />
+        <DashboardCard title="Revenue" value={`₹ ${stats.revenue}`} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white rounded-xl p-5 shadow border border-gray-100">
+        {/* Main Orders Table */}
+        <div className="lg:col-span-2 bg-white rounded-xl p-5 shadow-sm border border-gray-200">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="font-semibold text-lg text-gray-800">Quick Actions (Pending & Accepted)</h2>
-            <button onClick={() => navigate("/pharmacy/orders")} className="text-blue-600 text-sm font-bold hover:underline">View All History</button>
+            <h2 className="font-bold text-lg text-gray-800 uppercase tracking-tighter">New Tasks</h2>
+            <button onClick={() => navigate("/pharmacy/orders")} className="text-blue-600 text-sm font-bold hover:underline">Full History</button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
-              <thead className="bg-gray-50 text-gray-600">
+              <thead className="bg-gray-50 text-gray-400 uppercase text-[10px] font-black">
                 <tr>
                   <th className="p-3">Customer</th>
                   <th className="p-3">Medicine</th>
-                  <th className="p-3">Action</th>
+                  <th className="p-3 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-gray-100">
                 {recentOrders.map(order => (
-                  <tr key={order._id} className="border-t hover:bg-gray-50 transition-colors">
+                  <tr key={order._id} className="hover:bg-gray-50 transition-colors group">
                     <td className="p-3">
-                      <p className="font-bold text-gray-800">{order.user?.name || "Customer"}</p>
-                      <p className="text-[10px] text-blue-500 font-medium">📍 {order.user?.address?.city || "Silvassa"}</p>
+                      <p className="font-black text-gray-800 group-hover:text-blue-600">{order.user?.name || "Customer"}</p>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">📍 {order.user?.address?.city || "Silvassa"}</p>
                     </td>
-                    <td className="p-3 font-medium text-gray-700">{order.medicineName}</td>
+                    <td className="p-3 font-bold text-gray-700 italic">{order.medicineName}</td>
                     <td className="p-3">
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 justify-end">
                         {order.status === 'Pending' ? (
                           <>
                             <button 
                               onClick={() => handleUpdateStatus(order._id, 'Accepted')}
-                              className="bg-blue-600 text-white px-3 py-1 rounded-md text-[11px] font-black hover:bg-blue-700 shadow-sm"
+                              className="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-black hover:bg-blue-700 shadow-lg shadow-blue-100 uppercase tracking-wider"
                             >
                               ACCEPT
                             </button>
                             <button 
                               onClick={() => handleUpdateStatus(order._id, 'Rejected')}
-                              className="bg-red-50 text-red-600 px-3 py-1 rounded-md text-[11px] font-black hover:bg-red-100"
+                              className="bg-white border-2 border-red-100 text-red-500 px-3 py-1.5 rounded-lg text-[10px] font-black hover:bg-red-50 uppercase tracking-wider"
                             >
                               REJECT
                             </button>
@@ -177,7 +177,7 @@ export default function PharmacyDashboard() {
                         ) : (
                           <button 
                             onClick={() => handleUpdateStatus(order._id, 'Delivered')}
-                            className="bg-green-600 text-white px-3 py-1 rounded-md text-[11px] font-black hover:bg-green-700 shadow-md animate-pulse"
+                            className="bg-emerald-600 text-white px-4 py-1.5 rounded-lg text-[10px] font-black hover:bg-emerald-700 shadow-lg shadow-emerald-100 animate-pulse uppercase tracking-wider"
                           >
                             MARK DELIVERED
                           </button>
@@ -189,27 +189,31 @@ export default function PharmacyDashboard() {
               </tbody>
             </table>
             {recentOrders.length === 0 && (
-                <div className="text-center py-10">
-                    <p className="text-gray-400 font-medium italic">No active orders to process ✨</p>
+                <div className="text-center py-20 bg-gray-50/50 rounded-xl mt-2 border-2 border-dashed">
+                    <p className="text-gray-400 font-bold uppercase tracking-[0.2em] text-xs">Waiting for new orders... ✨</p>
                 </div>
             )}
           </div>
         </div>
 
+        {/* Right Sidebar */}
         <div className="space-y-6">
-          <div className="bg-white rounded-xl p-5 shadow border border-gray-100">
-            <h2 className="font-semibold text-lg mb-4 text-gray-800">System Status</h2>
-            <div className="flex items-center gap-3 bg-green-50 p-3 rounded-lg border border-green-100">
-              <span className="h-3 w-3 rounded-full bg-green-500 animate-pulse"></span>
-              <span className="text-sm font-bold text-green-700">Live Connection Active</span>
+          <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
+            <h2 className="font-bold text-sm mb-4 text-gray-400 uppercase tracking-widest">Connection Status</h2>
+            <div className="flex items-center gap-3 bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+              <span className="h-3 w-3 rounded-full bg-emerald-500 animate-ping"></span>
+              <span className="text-xs font-black text-emerald-700 uppercase tracking-widest">System Online</span>
             </div>
           </div>
           
-          <div className="bg-blue-600 rounded-xl p-5 shadow-lg text-white">
-             <h3 className="font-bold text-sm uppercase opacity-80">Quick Tip</h3>
-             <p className="text-xs mt-2 leading-relaxed">
-               Bhai, orders ko fast "Accept" karein taaki customer ka bharosa bana rahe! 🚀
-             </p>
+          <div className="bg-blue-600 rounded-2xl p-6 shadow-xl shadow-blue-200 text-white relative overflow-hidden group">
+             <div className="relative z-10">
+               <h3 className="font-black text-xs uppercase tracking-widest opacity-70">Admin Tip</h3>
+               <p className="text-sm mt-3 font-medium leading-relaxed italic">
+                 "Bhai, fast response se Store Rating badhti hai! 🚀"
+               </p>
+             </div>
+             <div className="absolute -right-4 -bottom-4 text-8xl opacity-10 group-hover:rotate-12 transition-transform">⚡</div>
           </div>
         </div>
       </div>
@@ -219,21 +223,21 @@ export default function PharmacyDashboard() {
 
 function DashboardCard({ title, value, danger, warning, blink }) {
   return (
-    <div className={`bg-white rounded-xl p-5 shadow border-b-4 transition-all duration-300 ${
-      danger ? 'border-red-500 bg-red-50' : 
-      warning ? 'border-orange-500 bg-orange-50' : 
-      blink ? 'border-blue-500 bg-blue-50 animate-pulse' : 
-      'border-transparent'
+    <div className={`bg-white rounded-2xl p-6 shadow-sm border-b-[6px] transition-all duration-500 hover:-translate-y-1 hover:shadow-xl ${
+      danger ? 'border-red-500' : 
+      warning ? 'border-orange-500' : 
+      blink ? 'border-blue-600 shadow-blue-50' : 
+      'border-gray-200'
     }`}>
-      <p className="text-xs text-gray-400 mb-1 uppercase font-black tracking-widest">{title}</p>
-      <h3 className={`text-3xl font-black ${danger ? 'text-red-600' : warning ? 'text-orange-600' : blink ? 'text-blue-700' : 'text-gray-800'}`}>
+      <p className="text-[10px] text-gray-400 mb-2 uppercase font-black tracking-[0.2em]">{title}</p>
+      <h3 className={`text-3xl font-black tracking-tighter ${danger ? 'text-red-600' : warning ? 'text-orange-600' : blink ? 'text-blue-700' : 'text-gray-800'}`}>
         {value}
       </h3>
       {(warning || blink) && (
-        <div className="flex items-center gap-1 mt-2">
+        <div className="flex items-center gap-1.5 mt-3">
             <span className={`h-1.5 w-1.5 rounded-full ${warning ? 'bg-orange-500' : 'bg-blue-500'} animate-ping`}></span>
-            <p className={`text-[10px] font-bold italic underline ${warning ? 'text-orange-600' : 'text-blue-600'}`}>
-              {warning ? 'Refill Soon!' : 'New Orders Incoming!'}
+            <p className={`text-[10px] font-black uppercase tracking-widest italic ${warning ? 'text-orange-600' : 'text-blue-600'}`}>
+              {warning ? 'Action Required!' : 'Processing...'}
             </p>
         </div>
       )}
