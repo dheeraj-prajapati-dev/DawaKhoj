@@ -1,23 +1,22 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext'; // 🔥 Context import kiya
 
 export default function Navbar() {
   const navigate = useNavigate();
-  const user = JSON.parse(localStorage.getItem('user'));
+  const { user, logout } = useAuth(); // 🔥 LocalStorage ki jagah Context use kiya
 
   // --- PWA INSTALL LOGIC START ---
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showInstallBtn, setShowInstallBtn] = useState(false);
 
   useEffect(() => {
-    // Browser jab install prompt ready karta hai
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
       setShowInstallBtn(true);
     });
 
-    // Install hone ke baad button chhupane ke liye
     window.addEventListener('appinstalled', () => {
       setShowInstallBtn(false);
       setDeferredPrompt(null);
@@ -37,8 +36,8 @@ export default function Navbar() {
   };
   // --- PWA INSTALL LOGIC END ---
 
-  const handleLogout = () => {
-    localStorage.clear();
+  const onLogout = () => {
+    logout(); // 🔥 Context wala logout call kiya
     navigate('/login');
   };
 
@@ -69,6 +68,11 @@ export default function Navbar() {
 
         {user ? (
           <>
+            {/* User Name (Professional Look) */}
+            <span className="hidden md:block text-xs font-bold text-gray-400 uppercase tracking-widest mr-2">
+              Hi, {user.name.split(' ')[0]}
+            </span>
+
             {user.role === 'admin' && (
               <Link to="/admin/dashboard" className="bg-blue-600 text-white text-[10px] md:text-xs font-black px-4 py-2 rounded-full shadow-md tracking-wider">
                 ADMIN PANEL
@@ -88,7 +92,7 @@ export default function Navbar() {
             )}
             
             <button 
-              onClick={handleLogout}
+              onClick={onLogout}
               className="ml-1 md:ml-2 text-gray-400 font-bold text-sm hover:text-red-500 transition border-l pl-3 md:pl-4"
             >
               Logout

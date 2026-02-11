@@ -1,6 +1,10 @@
 import Navbar from './components/Navbar';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import { AuthProvider } from './context/AuthContext'; // 🔥 Added AuthProvider
+import ProtectedRoute from './components/ProtectedRoute'; // 🔥 Added Security
+
+// Pages Import
 import Login from './pages/Login';
 import Register from './pages/Register';
 import PharmacyRegister from './pages/PharmacyRegister';
@@ -22,44 +26,65 @@ import ScrollToTop from './components/ScrollToTop';
 
 function App() {
   return (
-    <BrowserRouter>
-    <Toaster position="top-right" reverseOrder={false}/>
-    <ScrollToTop />
-      <div className="flex flex-col min-h-screen"> {/* Footer ko hamesha niche rakhne ke liye */}
-        <Navbar />
-        
-        <main className="flex-grow"> {/* Content area jo footer ko niche dhakelega */}
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<Home />} />
-            <Route path="/doctors" element={<DoctorConsult />} />
-            <Route path="/labs" element={<LabTests />} />
-            <Route path="/ambulance" element={<Ambulance />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} /> 
-            
-            {/* User Routes */}
-            <Route path="/my-orders" element={<MyOrders />} />
-            <Route path="/upload" element={<UploadPrescription />} />
-            <Route path="/results" element={<Results />} />
-            <Route path="/search" element={<MedicineSearch />} /> 
-            <Route path="/profile" element={<UserProfile />} />
-            
-            {/* Admin Routes */}
-            <Route path="/admin/dashboard" element={<AdminDashboard />} />
-            
-            {/* Pharmacy Routes */}
-            <Route path="/pharmacy/register" element={<PharmacyRegister />} />
-            <Route path="/pharmacy/dashboard" element={<PharmacyDashboard />} />
-            <Route path="/pharmacy/inventory" element={<PharmacyInventory />} />
-            <Route path="/pharmacy/orders" element={<PharmacyOrders />} />
-            
-          </Routes>
-        </main>
+    <AuthProvider> {/* 🔥 Ab poore app ko data milega */}
+      <BrowserRouter>
+        <Toaster position="top-right" reverseOrder={false}/>
+        <ScrollToTop />
+        <div className="flex flex-col min-h-screen font-sans">
+          <Navbar />
+          
+          <main className="flex-grow bg-gray-50/30">
+            <Routes>
+              {/* ✅ Public Routes (Everyone can see) */}
+              <Route path="/" element={<Home />} />
+              <Route path="/doctors" element={<DoctorConsult />} />
+              <Route path="/labs" element={<LabTests />} />
+              <Route path="/ambulance" element={<Ambulance />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} /> 
+              
+              {/* 🔐 User Protected Routes */}
+              <Route path="/my-orders" element={<ProtectedRoute><MyOrders /></ProtectedRoute>} />
+              <Route path="/upload" element={<ProtectedRoute><UploadPrescription /></ProtectedRoute>} />
+              <Route path="/results" element={<Results />} />
+              <Route path="/search" element={<MedicineSearch />} /> 
+              <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
+              
+              {/* 🚫 Admin Routes (Only Admin) */}
+              <Route path="/admin/dashboard" element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              } />
+              
+              {/* 🏥 Pharmacy Routes (Only Pharmacy Owners) */}
+              <Route path="/pharmacy/register" element={<ProtectedRoute><PharmacyRegister /></ProtectedRoute>} />
+              
+              <Route path="/pharmacy/dashboard" element={
+                <ProtectedRoute allowedRoles={['pharmacy']}>
+                  <PharmacyDashboard />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/pharmacy/inventory" element={
+                <ProtectedRoute allowedRoles={['pharmacy']}>
+                  <PharmacyInventory />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/pharmacy/orders" element={
+                <ProtectedRoute allowedRoles={['pharmacy']}>
+                  <PharmacyOrders />
+                </ProtectedRoute>
+              } />
+              
+            </Routes>
+          </main>
 
-        <Footer /> {/* Sabse niche Footer */}
-      </div>
-    </BrowserRouter>
+          <Footer />
+        </div>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 

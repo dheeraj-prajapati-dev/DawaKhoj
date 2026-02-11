@@ -2,6 +2,7 @@ import { useState } from 'react';
 import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast, Toaster } from 'react-hot-toast';
+import { UserPlus, Mail, Phone, Lock, Eye, EyeOff, Loader2, User } from 'lucide-react';
 
 export default function Register() {
   const [formData, setFormData] = useState({ 
@@ -11,9 +12,10 @@ export default function Register() {
     password: '', 
     role: 'patient' 
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // 1. PHONE VALIDATION: Sirf numbers aur max 10 digits
   const handlePhoneChange = (e) => {
     const value = e.target.value;
     if (/^\d*$/.test(value) && value.length <= 10) {
@@ -23,40 +25,47 @@ export default function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
 
-    // 2. EMAIL VALIDATION: Check karega ki format sahi hai ya nahi
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
-      return toast.error('Kripya ek sahi email address bharein.');
+      setLoading(false);
+      return toast.error('Kripya ek sahi email bharein.');
     }
 
-    // 3. PHONE LENGTH CHECK: Poore 10 digit hone chahiye
     if (formData.phone.length !== 10) {
-      return toast.error('Mobile number pure 10 digit ka hona chahiye.');
+      setLoading(false);
+      return toast.error('Mobile number 10 digit ka hona chahiye.');
     }
 
     try {
-      // Backend URL jo aapne set ki hai
       await axios.post('https://dawakhoj.onrender.com/api/auth/register', formData);
-      toast.success('Registration safal raha! Ab login karein.');
+      toast.success('Registration safal! Ab login karein.');
       setTimeout(() => navigate('/login'), 2000);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Registration fail ho gaya.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4 font-sans">
       <Toaster />
-      <div className="bg-white p-8 rounded-3xl shadow-xl w-full max-w-md border border-gray-100">
-        <h2 className="text-3xl font-black text-blue-600 text-center mb-6 italic">DawaKhoj+</h2>
-        <p className="text-center text-gray-500 mb-6 font-medium">Naya Account Banayein</p>
+      <div className="bg-white p-8 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.05)] w-full max-w-md border border-gray-100">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-14 h-14 bg-blue-50 rounded-2xl mb-4">
+            <UserPlus className="w-7 h-7 text-blue-600" />
+          </div>
+          <h2 className="text-3xl font-black text-gray-900 tracking-tight">DawaKhoj+</h2>
+          <p className="text-center text-gray-400 font-medium">Naya Account Banayein</p>
+        </div>
         
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-bold text-gray-400 ml-1 uppercase">Account Type</label>
+          <div className="space-y-1">
+            <label className="text-[10px] font-black text-gray-400 ml-1 uppercase tracking-widest">Account Type</label>
             <select 
-              className="w-full p-4 bg-gray-50 rounded-2xl border border-gray-100 outline-none focus:ring-2 focus:ring-blue-500 font-bold text-gray-700"
+              className="w-full p-4 bg-gray-50 rounded-2xl border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none font-bold text-gray-700 transition-all cursor-pointer"
               value={formData.role}
               onChange={e => setFormData({...formData, role: e.target.value})}
             >
@@ -65,32 +74,51 @@ export default function Register() {
             </select>
           </div>
 
-          <input type="text" placeholder="Pura Naam" 
-            className="w-full p-4 bg-gray-50 rounded-2xl border focus:ring-2 focus:ring-blue-500 outline-none" 
-            value={formData.name}
-            onChange={e => setFormData({...formData, name: e.target.value})} required />
+          <div className="relative group">
+            <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+            <input type="text" placeholder="Pura Naam" 
+              className="w-full pl-12 pr-4 py-4 bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all" 
+              value={formData.name}
+              onChange={e => setFormData({...formData, name: e.target.value})} required />
+          </div>
           
-          <input type="email" placeholder="Email Address" 
-            className="w-full p-4 bg-gray-50 rounded-2xl border focus:ring-2 focus:ring-blue-500 outline-none" 
-            value={formData.email}
-            onChange={e => setFormData({...formData, email: e.target.value})} required />
+          <div className="relative group">
+            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+            <input type="email" placeholder="Email Address" 
+              className="w-full pl-12 pr-4 py-4 bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all" 
+              value={formData.email}
+              onChange={e => setFormData({...formData, email: e.target.value})} required />
+          </div>
 
-          <input type="tel" placeholder="Mobile Number (10 Digits)" 
-            className="w-full p-4 bg-gray-50 rounded-2xl border focus:ring-2 focus:ring-blue-500 outline-none" 
-            value={formData.phone}
-            onChange={handlePhoneChange} required />
+          <div className="relative group">
+            <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+            <input type="tel" placeholder="Mobile Number" 
+              className="w-full pl-12 pr-4 py-4 bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all" 
+              value={formData.phone}
+              onChange={handlePhoneChange} required />
+          </div>
 
-          <input type="password" placeholder="Password" 
-            className="w-full p-4 bg-gray-50 rounded-2xl border focus:ring-2 focus:ring-blue-500 outline-none" 
-            value={formData.password}
-            onChange={e => setFormData({...formData, password: e.target.value})} required />
+          <div className="relative group">
+            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+            <input type={showPassword ? "text" : "password"} placeholder="Set Password" 
+              className="w-full pl-12 pr-12 py-4 bg-gray-50 border-transparent rounded-2xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all" 
+              value={formData.password}
+              onChange={e => setFormData({...formData, password: e.target.value})} required />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+            </button>
+          </div>
 
-          <button type="submit" className="w-full bg-blue-600 text-white font-bold py-4 rounded-2xl shadow-lg hover:bg-blue-700 transition-all active:scale-95 mt-4">
-            Register Karein
+          <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white font-bold py-4 rounded-2xl shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all active:scale-[0.98] mt-4 flex items-center justify-center gap-2">
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Register Karein'}
           </button>
         </form>
 
-        <p className="text-center mt-6 text-sm text-gray-500">
+        <p className="text-center mt-8 text-sm text-gray-500">
           Pehle se account hai? <Link to="/login" className="text-blue-600 font-bold hover:underline">Login</Link>
         </p>
       </div>
