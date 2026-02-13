@@ -1,22 +1,36 @@
-const Tesseract = require('tesseract.js');
+const vision = require('@google-cloud/vision');
+const path = require('path');
+const fs = require('fs');
+
+// Path check for production and local
+const keyPath = path.join(__dirname, '../../', process.env.GOOGLE_APPLICATION_CREDENTIALS || 'google-vision-key.json');
+
+const client = new vision.ImageAnnotatorClient({
+  keyFilename: keyPath
+});
 
 exports.extractTextFromImage = async (imagePath) => {
   try {
-    console.log('🧠 Tesseract OCR started on:', imagePath);
+    console.log('🧠 Vision OCR starting...');
+    
+    if (!fs.existsSync(imagePath)) {
+      console.error('❌ File not found at:', imagePath);
+      return "Error: Image file not found.";
+    }
 
-    const result = await Tesseract.recognize(
-      imagePath,
-      'eng',
-      {
-        logger: m => console.log(m.status)
-      }
-    );
+    const [result] = await client.textDetection(imagePath);
+    const detections = result.textAnnotations;
 
-    console.log('✅ OCR completed');
-    return result.data.text;
+    if (!detections || detections.length === 0) {
+      return "No text detected. Please search manually.";
+    }
+
+    console.log('✅ OCR Successful');
+    return detections[0].description;
 
   } catch (error) {
-    console.error('❌ Tesseract OCR Error:', error);
-    throw new Error('OCR failed');
+    console.error('❌ Vision API Error:', error.message);
+    // Fallback message taaki server crash na ho (Screenshot 631)
+    return "AI could not process the image at this moment.";
   }
 };

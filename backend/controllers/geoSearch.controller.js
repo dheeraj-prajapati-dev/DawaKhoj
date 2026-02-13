@@ -4,96 +4,102 @@ const Medicine = require('../models/Medicine');
 
 exports.findNearestPharmacies = async (req, res) => {
   try {
-    const { lat, lng, q } = req.query;
+    const { lat, lng, q, category } = req.query;
 
-    if (!lat || !lng || !q) {
-      return res.status(400).json({ success: false, message: 'Missing params (lat, lng, or q)' });
+    if (!lat || !lng) {
+      return res.status(400).json({ success: false, message: 'Location required' });
     }
 
-    // 1. Medicine Search (Name ya Salt)
-    const medicine = await Medicine.findOne({
-      $or: [
-        { name: new RegExp(q, 'i') },
-        { salt: new RegExp(q, 'i') }
-      ]
-    });
+    // 1. Medicine Search Logic (Strict AND Condition)
+    let andConditions = [];
 
-    if (!medicine) {
-      return res.json({ success: true, results: [] });
+    // Category Filter: Case-insensitive handle karne ke liye Regex use kar sakte hain
+    if (category && category !== 'All' && category !== 'undefined') {
+      const cleanCategory = decodeURIComponent(category).trim();
+      // Regex use kar rahe hain taaki 'Baby Care' aur 'baby care' dono match ho jayein safety ke liye
+      andConditions.push({ category: { $regex: new RegExp(`^${cleanCategory}$`, 'i') } });
     }
 
-    // 2. COORDINATES FIX: Strict Longitude, Latitude order
-    const userLongitude = parseFloat(lng);
-    const userLatitude = parseFloat(lat);
+    // Search Text Filter
+    if (q && q.trim().length > 0) {
+      const searchText = q.trim();
+      andConditions.push({
+        $or: [
+          { name: { $regex: searchText, $options: 'i' } },
+          { salt: { $regex: searchText, $options: 'i' } }
+        ]
+      });
+    }
 
-    console.log(`📡 DB Query -> Lng: ${userLongitude}, Lat: ${userLatitude}`);
+    let medicineCriteria = andConditions.length > 0 ? { $and: andConditions } : {};
 
-    // 3. Geospatial Aggregation (Finding nearby verified pharmacies)
+    // DEBUGGING: Check karo backend kya filter kar raha hai
+    console.log("🛠️ DB Query Criteria:", JSON.stringify(medicineCriteria));
+
+    // 2. Filtered Medicines dhoondho
+    const matchedMedicines = await Medicine.find(medicineCriteria).limit(50);
+    
+    if (!matchedMedicines.length) {
+      return res.json({ success: true, results: [], message: "No medicines matched these filters." });
+    }
+
+    const medicineIds = matchedMedicines.map(m => m._id);
+
+    // 3. Nearby Pharmacies Aggregation
     const nearbyPharmacies = await Pharmacy.aggregate([
       {
         $geoNear: {
-          near: {
-            type: "Point",
-            coordinates: [userLongitude, userLatitude]
-          },
+          near: { type: "Point", coordinates: [parseFloat(lng), parseFloat(lat)] },
           distanceField: "distance",
           spherical: true,
-          maxDistance: 50000, // 50km
-          distanceMultiplier: 0.001, // Meters to KM
+          maxDistance: 50000,
+          distanceMultiplier: 0.001,
           query: { isVerified: true }
         }
       }
     ]);
 
-    if (!nearbyPharmacies.length) {
-      return res.json({ success: true, results: [] });
-    }
+    if (!nearbyPharmacies.length) return res.json({ success: true, results: [] });
 
-    // 4. Inventory Matching (Optimized with Promise.all)
-    const options = await Promise.all(
-      nearbyPharmacies.map(async (pharmacy) => {
-        const inventory = await Inventory.findOne({
-          pharmacy: pharmacy._id,
-          medicine: medicine._id,
-          stock: { $gt: 0 }
-        });
+    const pharmacyIds = nearbyPharmacies.map(p => p._id);
 
-        if (inventory) {
-          return {
-            medicineName: medicine.name,
-            pharmacy: pharmacy.storeName,
-            pharmacyId: pharmacy._id,
-            price: inventory.price,
-            stock: inventory.stock,
-            // NaN safety check and formatting
-            distance: (pharmacy.distance !== undefined && !isNaN(pharmacy.distance)) 
-              ? parseFloat(pharmacy.distance.toFixed(1)) 
-              : 0,
-            location: pharmacy.location
-          };
-        }
-        return null;
-      })
-    );
+    // 4. Inventory Search (Population with match for double safety)
+    const inventoryItems = await Inventory.find({
+      pharmacy: { $in: pharmacyIds },
+      medicine: { $in: medicineIds },
+      stock: { $gt: 0 }
+    }).populate('medicine pharmacy');
 
-    // Filter out nulls (where medicine wasn't in stock)
-    const filteredOptions = options.filter(opt => opt !== null);
+    // 5. Grouping Logic
+    const grouped = {};
+    inventoryItems.forEach(item => {
+      // Safety check: Agar populate fail hua ya medicine delete ho gayi
+      if (!item.medicine) return;
 
-    // 5. Final Response Structure
-    res.json({
-      success: true,
-      results: [{
-        brand: medicine.brand || "Generics",
-        options: filteredOptions
-      }]
+      const brandName = item.medicine.brand || "Generics";
+      const pharData = nearbyPharmacies.find(p => p._id.toString() === item.pharmacy._id.toString());
+
+      if (!grouped[brandName]) {
+        grouped[brandName] = { brand: brandName, options: [] };
+      }
+
+      grouped[brandName].options.push({
+        medicineName: item.medicine.name,
+        pharmacy: item.pharmacy.storeName || item.pharmacy.name,
+        pharmacyId: item.pharmacy._id,
+        price: item.price,
+        stock: item.stock,
+        salt: item.medicine.salt,
+        category: item.medicine.category,
+        image: item.medicine.image || "https://cdn-icons-png.flaticon.com/512/883/883356.png",
+        distance: pharData ? parseFloat(pharData.distance.toFixed(1)) : 0
+      });
     });
+
+    res.json({ success: true, count: Object.keys(grouped).length, results: Object.values(grouped) });
 
   } catch (error) {
     console.error("❌ Aggregation Error:", error);
-    res.status(500).json({ 
-      success: false, 
-      message: "Internal Server Error", 
-      error: error.message 
-    });
+    res.status(500).json({ success: false, error: error.message });
   }
 };

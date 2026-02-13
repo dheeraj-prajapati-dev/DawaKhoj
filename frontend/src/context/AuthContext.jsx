@@ -3,16 +3,18 @@ import axios from 'axios';
 
 const AuthContext = createContext();
 
-// 🔥 Yeh instance automatic cookies (withCredentials) handle karega
 export const API = axios.create({
-  baseURL: 'https://dawakhoj.onrender.com/api',
-  withCredentials: true,
+  baseURL: window.location.hostname === 'localhost' 
+    ? 'http://localhost:5000/api' 
+    : 'https://dawakhoj.onrender.com/api',
+  withCredentials: true, 
 });
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Response Interceptor
   useEffect(() => {
     const interceptor = API.interceptors.response.use(
       (response) => response,
@@ -26,14 +28,24 @@ export const AuthProvider = ({ children }) => {
     return () => API.interceptors.response.eject(interceptor);
   }, []);
 
+  // Smart Load User
   useEffect(() => {
     const loadUser = async () => {
+      // 🔥 Fix: Agar cookie nahi hai toh request mat bhejo (Console saaf rahega)
+      const hasToken = document.cookie.split(';').some((item) => item.trim().startsWith('token='));
+      
+      if (!hasToken) {
+        setLoading(false);
+        return;
+      }
+
       try {
         const res = await API.get('/auth/me');
         if (res.data.success) {
           setUser(res.data.user);
         }
       } catch (err) {
+        console.log("No previous session found.");
         setUser(null);
       } finally {
         setLoading(false);

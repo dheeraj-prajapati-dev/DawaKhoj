@@ -8,14 +8,26 @@ const medicineSchema = new mongoose.Schema(
       trim: true
     },
 
+    brand: {
+      type: String,
+      trim: true
+    },
+
     salt: {
       type: String,
-      required: true
+      required: function() { return this.category === 'Prescription' || this.category === 'OTC'; }
     },
 
     category: {
-      type: String
-    }
+      type: String,
+      required: true,
+      enum: [
+        'Prescription', 'OTC', 'Devices', 'Baby Care', 
+        'Personal Care', 'Supplements', 'Ayurvedic', 'First Aid'
+      ]
+    },
+    price: { type: Number, default: 0 },
+    prescription_required: { type: Boolean, default: false }
   },
   { timestamps: true }
 );

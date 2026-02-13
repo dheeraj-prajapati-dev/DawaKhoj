@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { API } from '../context/AuthContext'; // 🔥 API use kar rahe hain
+import { API } from '../context/AuthContext';
 import { toast, Toaster } from 'react-hot-toast';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom'; // Added useLocation
 
 const MedicineSearch = () => {
   const [query, setQuery] = useState('');
@@ -11,7 +11,13 @@ const MedicineSearch = () => {
   const [sortBy, setSortBy] = useState('price-low');
   const [showModal, setShowModal] = useState(false);
   const [lastOrder, setLastOrder] = useState(null);
+  
   const navigate = useNavigate();
+  const location = useLocation(); // Hook to access URL params
+
+  // 🔥 URL se category extract karna (e.g., /search?category=Baby%20Care)
+  const searchParams = new URLSearchParams(location.search);
+  const activeCategory = searchParams.get('category');
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -28,17 +34,18 @@ const MedicineSearch = () => {
   }, []);
 
   const performSearch = async () => {
-    if (query.trim().length <= 2 || !userCoords) {
+    // 🔥 Search tabhi trigger hoga jab query 2 chars se badi ho YA koi category selected ho
+    if ((query.trim().length <= 2 && !activeCategory) || !userCoords) {
       setResults([]);
       return;
     }
 
     setLoading(true);
     try {
-      // 🔥 BASE_URL ki zaroorat nahi, API instance mein set hai
       const res = await API.get('/search/medicine', {
         params: { 
           q: query,
+          category: activeCategory, // 🔥 YEH LINE MISSING THI - Ab category filter kaam karega
           lat: userCoords.lat,
           lng: userCoords.lng
         }
@@ -48,17 +55,19 @@ const MedicineSearch = () => {
       }
     } catch (err) {
       console.error("Search failed:", err);
+      toast.error("Failed to fetch results.");
     } finally {
       setLoading(false);
     }
   };
 
+  // 🔥 Dependency array mein activeCategory add kiya taaki category badalne par turant search ho
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       performSearch();
     }, 600);
     return () => clearTimeout(delayDebounceFn);
-  }, [query, userCoords]);
+  }, [query, userCoords, activeCategory]);
 
   const sortedResults = useMemo(() => {
     if (!results || !Array.isArray(results)) return [];
@@ -76,7 +85,6 @@ const MedicineSearch = () => {
 
   const handleOrder = async (item) => {
     try {
-      // 🔥 Cookies automatic jayengi, localStorage header ki zaroorat nahi
       const res = await API.post('/orders/create', {
         pharmacyId: item.pharmacyId,
         medicineName: item.medicineName,
@@ -101,6 +109,7 @@ const MedicineSearch = () => {
     <div className="p-6 max-w-5xl mx-auto min-h-screen bg-gray-50/50 font-sans">
       <Toaster position="top-center" />
 
+      {/* Confirmation Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-[2.5rem] p-10 max-w-sm w-full text-center shadow-2xl">
@@ -112,14 +121,27 @@ const MedicineSearch = () => {
         </div>
       )}
 
-      <header className="text-center mb-12">
-        <h1 className="text-5xl font-black text-blue-600 italic tracking-tighter">DawaKhoj+</h1>
+      <header className="text-center mb-8">
+        <h1 className="text-5xl font-black text-blue-600 italic tracking-tighter cursor-pointer" onClick={() => navigate('/')}>DawaKhoj+</h1>
+        {/* 🔥 Active Category Indicator */}
+        {activeCategory && (
+          <div className="mt-4">
+            <span className="bg-blue-100 text-blue-700 px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest">
+              Filtering: {activeCategory}
+            </span>
+          </div>
+        )}
       </header>
       
       <div className="sticky top-4 z-40 bg-gray-50/80 backdrop-blur-md pb-4">
         <div className="relative mb-6">
           <div className="flex gap-2 shadow-2xl p-2 bg-white rounded-3xl border-2 border-transparent focus-within:border-blue-500 transition-all">
-            <input className="flex-1 p-4 outline-none text-lg bg-transparent font-medium" placeholder="Search medicine..." value={query} onChange={(e) => setQuery(e.target.value)} />
+            <input 
+              className="flex-1 p-4 outline-none text-lg bg-transparent font-medium" 
+              placeholder={activeCategory ? `Search in ${activeCategory}...` : "Search medicine..."}
+              value={query} 
+              onChange={(e) => setQuery(e.target.value)} 
+            />
             <div className="flex items-center px-6">{loading ? <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div> : "🔍"}</div>
           </div>
         </div>
@@ -151,8 +173,15 @@ const MedicineSearch = () => {
                         ? `APPROX. ${item.distance.toFixed(1)} KM AWAY` 
                         : 'DISTANCE NOT AVAILABLE' }
                     </p>
+                    {/* Category Label for Confirmation */}
+                    <p className="text-[9px] bg-gray-50 text-gray-400 w-fit px-2 py-0.5 rounded mt-2 uppercase font-bold">Category: {item.category}</p>
+                    
                     <div className="flex gap-2 mt-6">
-                      <button onClick={() => handleOrder(item)} disabled={item.stock === 0} className={`px-8 py-3 rounded-2xl text-[10px] font-black tracking-widest ${item.stock > 0 ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>
+                      <button 
+                        onClick={() => handleOrder(item)} 
+                        disabled={item.stock === 0} 
+                        className={`px-8 py-3 rounded-2xl text-[10px] font-black tracking-widest ${item.stock > 0 ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+                      >
                         {item.stock > 0 ? 'ORDER NOW ⚡' : 'OUT OF STOCK'}
                       </button>
                       <button onClick={() => getDirections(item.pharmacy)} className="bg-white text-gray-900 border-2 border-gray-100 px-6 py-3 rounded-2xl text-[10px] font-black">MAPS 🚩</button>
@@ -165,7 +194,12 @@ const MedicineSearch = () => {
               ))}
             </div>
           </div>
-        )) : query.length > 2 && !loading && <p className="text-center text-gray-400 font-bold mt-10">No medicine found nearby.</p>}
+        )) : (query.length > 2 || activeCategory) && !loading && (
+          <div className="text-center mt-20">
+            <p className="text-gray-400 font-bold text-xl uppercase tracking-tighter">No medicine found in this category.</p>
+            <button onClick={() => navigate('/search')} className="mt-4 text-blue-600 font-black text-xs underline">CLEAR ALL FILTERS</button>
+          </div>
+        )}
       </div>
     </div>
   );

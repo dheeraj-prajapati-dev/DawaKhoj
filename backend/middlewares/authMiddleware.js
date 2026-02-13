@@ -2,42 +2,62 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { z } = require('zod');
 
-// 🔐 TOKEN VERIFY (Cookie + Header Support)
+// 🔐 TOKEN VERIFY (Optimized for Home Page)
 exports.protect = async (req, res, next) => {
   try {
-    let token = req.cookies.token; // Pehle cookie check karo
+    let token = req.cookies ? req.cookies.token : null; 
 
     if (!token && req.headers.authorization?.startsWith('Bearer')) {
-      token = req.headers.authorization.split(' ')[1]; // Backup: Header check
+      token = req.headers.authorization.split(' ')[1];
     }
 
-    if (!token) return res.status(401).json({ message: 'Not authorized, please login' });
+    // 🔥 Fix: Home page par silent error bhejein, terminal mein log na karein
+    if (!token) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'No active session' 
+      });
+    }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = await User.findById(decoded.id).select('-password');
+    const currentUser = await User.findById(decoded.id).select('-password');
+
+    if (!currentUser) {
+      return res.status(401).json({ success: false, message: 'Account not found' });
+    }
+
+    req.user = currentUser;
     next();
+
   } catch (error) {
-    res.status(401).json({ message: 'Session expired, login again' });
+    // Sirf expire hone par hi console karein debug ke liye
+    if (error.name === 'TokenExpiredError') {
+      console.log("⏰ User session expired");
+    }
+    res.status(401).json({ success: false, message: 'Session expired' });
   }
 };
 
 // 🛡️ ROLE CHECK
 exports.authorizeRoles = (...roles) => {
   return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ message: `Access denied for role: ${req.user.role}` });
+    if (!req.user || !roles.includes(req.user.role)) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Access denied' 
+      });
     }
     next();
   };
 };
 
-// ✅ ZOD VALIDATION SCHEMAS
+// ✅ ZOD VALIDATION (Registration)
 const registerSchema = z.object({
-  name: z.string().min(2, "Name is too short"),
-  email: z.string().email("Invalid email format"),
-  phone: z.string().length(10, "Phone must be 10 digits"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  role: z.enum(['patient', 'pharmacy', 'admin']).optional()
+  name: z.string().trim().min(2, "Naam thoda bada likhein"),
+  email: z.string().email("Email format sahi nahi hai").toLowerCase(),
+  phone: z.string().regex(/^[0-9]{10}$/, "Mobile number 10 digits ka hona chahiye"),
+  password: z.string().min(6, "Password kam se kam 6 characters ka ho"),
+  role: z.enum(['patient', 'pharmacy', 'admin']).default('patient')
 });
 
 exports.validateRegister = (req, res, next) => {
