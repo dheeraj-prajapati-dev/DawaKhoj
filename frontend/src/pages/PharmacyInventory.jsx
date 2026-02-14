@@ -4,15 +4,21 @@ import { API, useAuth } from '../context/AuthContext';
 import { getMyPharmacyProfile } from '../services/pharmacy.service';
 import AddMedicineModal from '../components/inventory/AddMedicineModal';
 import EditMedicineModal from '../components/inventory/EditMedicineModal';
-import { toast } from 'react-hot-toast';
+import { toast, Toaster } from 'react-hot-toast';
+import { 
+  Plus, Upload, Package, Search, 
+  Trash2, Edit3, ShieldAlert, Beaker, ChevronLeft
+} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export default function PharmacyInventory() {
   const { inventory, loading, fetchInventory } = useInventory();
-  const { logout } = useAuth();
+  const navigate = useNavigate();
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [isVerified, setIsVerified] = useState(false);
-  const [uploading, setUploading] = useState(false); // 🔥 For Bulk Upload Loader
+  const [uploading, setUploading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -26,31 +32,28 @@ export default function PharmacyInventory() {
     loadProfile();
   }, []);
 
-  // 🔥 NEW: Bulk Upload Handler
   const handleBulkUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
     const formData = new FormData();
     formData.append('file', file);
-
     setUploading(true);
-    const loadingToast = toast.loading("Processing thousands of items...");
+    const loadingToast = toast.loading("Uploading records...");
 
     try {
       const res = await API.post('/inventory/bulk-upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      
       if (res.data.success) {
-        toast.success(res.data.message, { id: loadingToast });
-        fetchInventory(); // Refresh table
+        toast.success(res.data.message || "Upload Success!", { id: loadingToast });
+        fetchInventory();
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || "Bulk Upload Failed", { id: loadingToast });
+      toast.error(err.response?.data?.message || "Upload Failed", { id: loadingToast });
     } finally {
       setUploading(false);
-      e.target.value = null; // Reset input
+      e.target.value = null;
     }
   };
 
@@ -58,114 +61,147 @@ export default function PharmacyInventory() {
     if (window.confirm("Kya aap is medicine ko inventory se hatana chahte hain?")) {
       try {
         await API.delete(`/inventory/delete/${id}`);
-        toast.success("Deleted successfully!");
+        toast.success("Medicine Purged");
         fetchInventory();
       } catch (err) {
-        toast.error(err.response?.data?.message || "Delete failed");
+        toast.error("Operation failed");
       }
     }
   };
 
+  const filteredItems = inventory.filter(item => 
+    (item.medicine?.name || item.name || "").toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   if (loading) return (
-    <div className="flex items-center justify-center h-screen font-black text-blue-600 animate-pulse uppercase tracking-[0.3em]">
-      LOADING INVENTORY...
+    <div className="flex items-center justify-center h-screen bg-slate-950 font-black text-blue-500 animate-pulse uppercase tracking-[0.3em]">
+      ACCESSING DATA VAULT...
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans">
-      {/* Header Section */}
-      <div className="bg-white border-b border-gray-100 px-8 py-6 flex justify-between items-center sticky top-0 z-10 shadow-sm">
-        <h1 className="text-2xl font-black text-gray-900 tracking-tighter uppercase italic">🏥 Inventory</h1>
+    <div className="min-h-screen bg-slate-950 p-4 md:p-8 font-sans text-white relative">
+      <Toaster position="top-right" />
+      
+      {/* 🚀 Header Area */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-10 gap-6">
+        <div>
+          <button 
+            onClick={() => navigate(-1)} 
+            className="text-slate-500 hover:text-blue-500 flex items-center gap-1 text-[10px] font-black uppercase tracking-widest mb-2 transition-colors"
+          >
+            <ChevronLeft size={14} /> Back to Dashboard
+          </button>
+          <h1 className="text-3xl font-black tracking-tighter italic flex items-center gap-3 uppercase">
+            Manage <span className="text-blue-500">Inventory</span> 
+            <Package className="text-blue-500 w-6 h-6" />
+          </h1>
+        </div>
         
-        <div className="flex items-center gap-4">
-          {/* 🔥 New: Bulk Upload Hidden Input & Label Button */}
-          <label className={`relative flex items-center justify-center px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer border-2 ${isVerified ? 'border-emerald-100 bg-emerald-50 text-emerald-600 hover:bg-emerald-100' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>
-            {uploading ? "⏳ Uploading..." : "⬆️ Bulk Upload (CSV)"}
+        <div className="flex flex-wrap gap-3 w-full lg:w-auto">
+          {/* Tactical Search */}
+          <div className="relative flex-grow lg:flex-grow-0">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
             <input 
-              type="file" 
-              accept=".csv" 
-              hidden 
-              disabled={!isVerified || uploading} 
-              onChange={handleBulkUpload} 
+              type="text"
+              placeholder="Filter Terminal..."
+              className="bg-slate-900 border border-slate-800 rounded-2xl pl-12 pr-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-all w-full lg:w-64"
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
+          </div>
+
+          <label className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer border-2 ${isVerified ? 'border-emerald-500/20 bg-emerald-500/5 text-emerald-500 hover:bg-emerald-500 hover:text-white' : 'bg-slate-900 text-slate-600 border-slate-800 cursor-not-allowed'}`}>
+            <Upload size={14} />
+            {uploading ? "⏳" : "Bulk CSV"}
+            <input type="file" accept=".csv" hidden disabled={!isVerified || uploading} onChange={handleBulkUpload} />
           </label>
 
           <button
             disabled={!isVerified}
             onClick={() => setShowAddModal(true)}
-            className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${isVerified ? 'bg-blue-600 text-white shadow-lg shadow-blue-100 hover:bg-blue-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
+            className={`flex items-center gap-2 px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${isVerified ? 'bg-blue-600 text-white shadow-xl shadow-blue-900/20 hover:bg-blue-500' : 'bg-slate-900 text-slate-600 border-slate-800'}`}
           >
-            + Add Medicine
-          </button>
-          
-          <button
-            onClick={logout}
-            className="px-6 py-2.5 rounded-2xl bg-white border-2 border-red-50 text-red-500 hover:bg-red-50 text-[10px] font-black uppercase tracking-widest transition-all"
-          >
-            Logout
+            <Plus size={14} /> Add New
           </button>
         </div>
       </div>
 
-      <div className="p-8 max-w-7xl mx-auto">
-        {!isVerified && (
-          <div className="mb-8 rounded-[1.5rem] bg-yellow-50 border-2 border-yellow-100 text-yellow-700 px-6 py-4 font-bold text-sm flex items-center gap-3 animate-bounce">
-            <span className="text-xl">⚠️</span> Admin verification pending. Access limited.
-          </div>
-        )}
+      {!isVerified && (
+        <div className="mb-8 rounded-[1.5rem] bg-amber-500/10 border-2 border-amber-500/20 text-amber-500 px-6 py-4 font-bold text-xs flex items-center gap-3 animate-pulse uppercase tracking-widest">
+          <ShieldAlert /> Admin Clearance Required. Operations Restricted.
+        </div>
+      )}
 
-        {/* Inventory Table Container */}
-        <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden">
+      {/* 📊 Main Terminal Table */}
+      <div className="bg-slate-900/40 backdrop-blur-xl rounded-[2.5rem] border border-slate-800/60 overflow-hidden">
+        <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50/50 border-b border-gray-100">
-              <tr className="text-left text-gray-400 font-black text-[10px] uppercase tracking-[0.2em]">
-                <th className="px-8 py-5">Medicine & Category</th>
-                <th className="px-8 py-5">Salt Composition</th>
-                <th className="px-8 py-5">Price</th>
-                <th className="px-8 py-5">Stock Status</th>
-                <th className="px-8 py-5 text-center">Actions</th>
+            <thead className="bg-slate-950/50 border-b border-slate-800">
+              <tr className="text-left text-slate-500 font-black text-[10px] uppercase tracking-[0.2em]">
+                <th className="px-8 py-6">Medicine & Type</th>
+                <th className="px-8 py-6">Chemical Salt</th>
+                <th className="px-8 py-6">Unit Price</th>
+                <th className="px-8 py-6">Stock Level</th>
+                <th className="px-8 py-6 text-center">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
-              {inventory.length === 0 ? (
+            <tbody className="divide-y divide-slate-800/50">
+              {filteredItems.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="text-center py-20 text-gray-300 font-black uppercase italic tracking-widest">No items found. Use Bulk Upload to add thousands.</td>
+                  <td colSpan="5" className="text-center py-24 text-slate-600 font-black uppercase italic tracking-widest">
+                    <Beaker className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                    Database Empty
+                  </td>
                 </tr>
               ) : (
-                inventory.map((item) => (
-                  <tr key={item._id} className="hover:bg-gray-50/50 transition-all group">
-                    <td className="px-8 py-5">
+                filteredItems.map((item) => (
+                  <tr key={item._id} className="hover:bg-blue-600/5 transition-all group">
+                    <td className="px-8 py-6">
                       <div className="flex flex-col">
-                        <span className="font-black text-gray-800 italic uppercase text-base">{item.medicine?.name || item.name}</span>
-                        <span className="text-[10px] font-bold text-blue-500 uppercase tracking-tight">{item.medicine?.category || 'General'}</span>
+                        <span className="font-black text-slate-200 group-hover:text-blue-400 italic uppercase text-base transition-colors">
+                          {item.medicine?.name || item.name}
+                        </span>
+                        <span className="text-[10px] font-bold text-blue-500/60 uppercase tracking-tight">
+                          {item.medicine?.category || 'Pharma'}
+                        </span>
                       </div>
                     </td>
-                    <td className="px-8 py-5 text-gray-500 font-medium">{item.medicine?.salt || 'N/A'}</td>
-                    <td className="px-8 py-5 font-black text-gray-900">₹{item.price}</td>
+                    <td className="px-8 py-6 text-slate-400 font-medium">
+                      {item.medicine?.salt || 'N/A'}
+                    </td>
+                    <td className="px-8 py-6 font-black text-emerald-400 text-lg italic">
+                      ₹{item.price}
+                    </td>
                     
-                    <td className="px-8 py-5">
+                    <td className="px-8 py-6">
                       {item.stock === 0 ? (
-                        <span className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-red-100 text-red-600 border border-red-200">Out of Stock</span>
+                        <span className="px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-red-500/10 text-red-500 border border-red-500/30">
+                          OUT OF STOCK
+                        </span>
                       ) : (
-                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${item.stock <= 10 ? 'bg-yellow-100 text-yellow-700 border-yellow-200 animate-pulse' : 'bg-green-100 text-green-700 border-green-200'}`}>
-                          {item.stock} Available
+                        <span className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border ${item.stock <= 10 ? 'bg-orange-500/10 text-orange-400 border-orange-500/20 animate-pulse' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'}`}>
+                          {item.stock} Units Available
                         </span>
                       )}
                     </td>
 
-                    <td className="px-8 py-5">
-                      <div className="flex justify-center gap-6 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <td className="px-8 py-6">
+                      {/* Actions hamesha visible rahengi but hover par highlight hongi */}
+                      <div className="flex justify-center gap-3">
                         <button
                           disabled={!isVerified}
                           onClick={() => setEditingItem(item)}
-                          className="text-blue-600 hover:text-blue-800 font-black text-[10px] uppercase tracking-widest disabled:opacity-30"
-                        >Edit</button>
+                          className="p-2.5 rounded-xl bg-slate-800 text-slate-400 hover:bg-blue-600 hover:text-white transition-all disabled:opacity-10 border border-slate-700/50"
+                        >
+                          <Edit3 size={16} />
+                        </button>
                         <button
                           disabled={!isVerified}
                           onClick={() => handleDelete(item._id)}
-                          className="text-red-500 hover:text-red-700 font-black text-[10px] uppercase tracking-widest disabled:opacity-30"
-                        >Delete</button>
+                          className="p-2.5 rounded-xl bg-slate-800 text-slate-400 hover:bg-red-600 hover:text-white transition-all disabled:opacity-10 border border-slate-700/50"
+                        >
+                          <Trash2 size={16} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -176,7 +212,6 @@ export default function PharmacyInventory() {
         </div>
       </div>
 
-      {/* Modals */}
       {showAddModal && isVerified && (
         <AddMedicineModal onClose={() => setShowAddModal(false)} refresh={fetchInventory} />
       )}

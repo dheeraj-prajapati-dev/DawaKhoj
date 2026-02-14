@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 import { getAllPharmacies, approvePharmacy, deletePharmacy } from '../services/admin.service';
 import { toast, Toaster } from 'react-hot-toast';
+import { 
+  Users, Store, Package, IndianRupee, 
+  ShieldCheck, Clock, Search, Trash2, CheckCircle 
+} from 'lucide-react';
 
 export default function AdminDashboard() {
   const [data, setData] = useState({ stats: {}, pharmacies: [] });
@@ -11,38 +15,36 @@ export default function AdminDashboard() {
   const fetchData = async () => {
     try {
       const res = await getAllPharmacies();
-      // Backend agar 'success' true bhej raha hai toh data set karein
       setData({
         stats: res.data.stats || {},
         pharmacies: res.data.pharmacies || []
       });
     } catch (err) {
-      console.error(err);
-      toast.error("Security Check: Admin access denied or data load failed");
+      toast.error("Security Check: Admin access denied");
     } finally {
       setLoading(false);
     }
   };
 
   const handleApprove = async (id) => {
-    if (!confirm('Kya aap is Pharmacy ko approve karna chahte hain?')) return;
+    if (!confirm('Approve this Pharmacy?')) return;
     try {
       await approvePharmacy(id);
-      toast.success("Pharmacy Approved! 🎉");
-      fetchData(); // List refresh karein
+      toast.success("Pharmacy Verified! 🎉");
+      fetchData();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Approval fail ho gaya");
+      toast.error("Approval failed");
     }
   };
 
   const handleReject = async (id) => {
-    if (!confirm('🚨 CRITICAL: Kya aap is registration ko REJECT (Delete) karna chahte hain?')) return;
+    if (!confirm('🚨 REJECT this registration?')) return;
     try {
       await deletePharmacy(id);
-      toast.success("Pharmacy Record Deleted");
-      fetchData(); // List refresh karein
+      toast.success("Record Deleted");
+      fetchData();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Rejection fail ho gaya");
+      toast.error("Action failed");
     }
   };
 
@@ -58,38 +60,44 @@ export default function AdminDashboard() {
   });
 
   if (loading) return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-4">
-      <div className="animate-spin rounded-full h-14 w-14 border-t-4 border-blue-600"></div>
-      <p className="text-slate-500 font-bold animate-pulse">Authenticating Admin Access...</p>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-950 gap-4">
+      <div className="relative">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
+        <div className="absolute top-0 left-0 animate-pulse rounded-full h-16 w-16 bg-blue-500/10"></div>
+      </div>
+      <p className="text-slate-500 text-xs font-black uppercase tracking-[0.3em]">Authenticating Admin...</p>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] p-4 md:p-8 font-sans">
+    <div className="min-h-screen bg-slate-950 p-6 md:p-10 font-sans text-white relative overflow-hidden">
       <Toaster position="top-right" />
       
+      {/* Background Decor */}
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/5 blur-[120px] rounded-full -z-10"></div>
+
       <div className="max-w-7xl mx-auto">
-        {/* --- Header Section --- */}
-        <header className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
+        {/* --- Header --- */}
+        <header className="flex flex-col lg:flex-row lg:items-end justify-between mb-12 gap-8">
           <div>
-            <div className="inline-block px-4 py-1.5 mb-4 rounded-xl bg-blue-50 text-blue-600 text-xs font-black uppercase tracking-widest">
-              Executive Panel
+            <div className="inline-flex items-center gap-2 px-3 py-1 mb-4 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-black uppercase tracking-[0.2em]">
+              <ShieldCheck className="w-3 h-3" /> Command Center
             </div>
-            <h1 className="text-5xl font-black text-slate-900 tracking-tighter">Command Center 👑</h1>
-            <p className="text-slate-500 font-medium mt-2">DawaKhoj Network Administration & Quality Control</p>
+            <h1 className="text-4xl md:text-5xl font-black tracking-tighter italic">ADMIN <span className="text-blue-500 text-glow">PANEL</span></h1>
+            <p className="text-slate-500 font-medium mt-2 uppercase text-[10px] tracking-widest">Network Administration & Quality Control</p>
           </div>
           
-          <div className="flex bg-white p-1.5 rounded-[1.5rem] shadow-xl shadow-slate-200/40 border border-slate-100 items-center">
+          <div className="flex bg-slate-900/50 p-1.5 rounded-2xl border border-slate-800 backdrop-blur-md">
              {['all', 'pending', 'verified'].map((type) => (
                <button 
                 key={type}
                 onClick={() => setFilter(type)} 
-                className={`px-6 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-300 ${
-                  filter === type ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:text-slate-600'
+                className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 ${
+                  filter === type ? 'bg-blue-600 text-white shadow-[0_0_20px_rgba(37,99,235,0.3)]' : 'text-slate-500 hover:text-slate-300'
                 }`}
                >
                  {type} {type === 'pending' && data.stats?.pendingVerifications > 0 && 
-                  <span className="ml-2 bg-red-500 text-white px-2 py-0.5 rounded-full text-[10px] animate-pulse">
+                  <span className="ml-2 bg-red-500 text-white px-1.5 py-0.5 rounded-md text-[8px] animate-bounce">
                     {data.stats.pendingVerifications}
                   </span>}
                </button>
@@ -97,80 +105,79 @@ export default function AdminDashboard() {
           </div>
         </header>
 
-        {/* --- Stats Section --- */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
-          <StatCard title="Total Patients" value={data.stats?.totalUsers || 0} icon="👥" color="bg-blue-600" />
-          <StatCard title="Total Stores" value={data.stats?.totalPharmacies || 0} icon="🏥" color="bg-indigo-600" />
-          <StatCard title="Total Orders" value={data.stats?.totalOrders || 0} icon="📦" color="bg-purple-600" />
-          <StatCard title="Revenue" value={`₹${data.stats?.totalRevenue || 0}`} icon="💰" color="bg-emerald-600" />
+        {/* --- Stats --- */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+          <StatCard title="Patients" value={data.stats?.totalUsers} icon={<Users />} color="blue" />
+          <StatCard title="Stores" value={data.stats?.totalPharmacies} icon={<Store />} color="indigo" />
+          <StatCard title="Orders" value={data.stats?.totalOrders} icon={<Package />} color="purple" />
+          <StatCard title="Revenue" value={`₹${data.stats?.totalRevenue}`} icon={<IndianRupee />} color="emerald" />
         </div>
 
-        {/* --- Table Section --- */}
-        <div className="bg-white rounded-[3rem] shadow-2xl shadow-slate-200/60 border border-slate-100 overflow-hidden transition-all">
-          <div className="p-8 border-b border-slate-100 flex flex-col lg:flex-row justify-between lg:items-center gap-6">
-            <div>
-              <h2 className="text-2xl font-black text-slate-800 tracking-tight">Pharmacy Queue</h2>
-              <p className="text-slate-400 text-sm font-medium">Verify or remove stores from your network</p>
-            </div>
+        {/* --- Search & Table --- */}
+        <div className="bg-slate-900/40 backdrop-blur-xl rounded-[2.5rem] border border-slate-800/60 shadow-2xl overflow-hidden">
+          <div className="p-8 border-b border-slate-800 flex flex-col md:flex-row justify-between md:items-center gap-6">
+            <h2 className="text-xl font-black italic tracking-tight uppercase">Pharmacy Queue</h2>
             <div className="relative group">
-              <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4" />
               <input 
                 type="text" 
                 placeholder="Search store or email..." 
-                className="bg-slate-50 border-2 border-transparent rounded-[2rem] pl-12 pr-6 py-4 text-sm w-full lg:w-[400px] focus:bg-white focus:border-blue-100 focus:outline-none transition-all font-medium shadow-inner"
+                className="bg-slate-950 border border-slate-800 rounded-xl pl-12 pr-6 py-3 text-sm w-full md:w-[350px] focus:border-blue-500/50 outline-none transition-all font-medium"
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
           </div>
           
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead className="bg-slate-50/70 text-slate-500 text-[10px] uppercase tracking-[0.2em] font-black">
+            <table className="w-full text-left">
+              <thead className="bg-slate-950/50 text-slate-500 text-[10px] uppercase tracking-[0.2em] font-black">
                 <tr>
-                  <th className="p-8">Pharmacy / Owner</th>
-                  <th className="p-8">Account Status</th>
-                  <th className="p-8 text-right pr-12">Admin Actions</th>
+                  <th className="p-6">Pharmacy Details</th>
+                  <th className="p-6">Status</th>
+                  <th className="p-6 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-800/50">
                 {filteredPharmacies.map((p) => (
-                  <tr key={p._id} className="hover:bg-slate-50/50 transition-all duration-300 group">
-                    <td className="p-8">
+                  <tr key={p._id} className="hover:bg-blue-500/[0.02] transition-colors group">
+                    <td className="p-6">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-xl shadow-inner font-bold text-slate-400 group-hover:bg-blue-600 group-hover:text-white transition-all duration-500">
+                        <div className="w-11 h-11 rounded-xl bg-slate-800 flex items-center justify-center text-sm font-black text-slate-400 group-hover:text-blue-500 transition-colors">
                           {p.storeName?.charAt(0)}
                         </div>
-                        <div className="flex flex-col">
-                          <span className="font-black text-slate-800 text-lg tracking-tight">{p.storeName}</span>
-                          <span className="text-slate-400 text-xs font-bold uppercase tracking-wider">{p.owner?.email}</span>
+                        <div>
+                          <p className="font-black text-slate-200 uppercase tracking-tight text-sm">{p.storeName}</p>
+                          <p className="text-slate-500 text-[10px] font-bold tracking-wider">{p.owner?.email}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="p-8">
-                      <span className={`inline-flex items-center px-5 py-2 rounded-2xl text-[10px] font-black tracking-widest uppercase ${
-                        p.isVerified ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-amber-50 text-amber-600 border border-amber-100'
+                    <td className="p-6 text-xs">
+                      <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full font-black uppercase tracking-widest text-[9px] ${
+                        p.isVerified ? 'text-emerald-500 bg-emerald-500/10' : 'text-amber-500 bg-amber-500/10'
                       }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full mr-2.5 ${p.isVerified ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`}></span>
+                        <div className={`w-1 h-1 rounded-full ${p.isVerified ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`}></div>
                         {p.isVerified ? 'Verified' : 'Pending'}
-                      </span>
+                      </div>
                     </td>
-                    <td className="p-8">
-                      <div className="flex items-center justify-end gap-3">
+                    <td className="p-6">
+                      <div className="flex items-center justify-end gap-2">
                         {!p.isVerified ? (
                           <button
                             onClick={() => handleApprove(p._id)}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg shadow-blue-200 transition-all hover:-translate-y-1"
+                            className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
                           >
                             Approve
                           </button>
                         ) : (
-                          <span className="text-slate-300 text-[10px] font-black uppercase tracking-widest border-2 border-slate-50 px-6 py-2.5 rounded-2xl cursor-not-allowed">Active</span>
+                          <div className="flex items-center gap-1 text-slate-600 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest border border-slate-800">
+                            <CheckCircle className="w-3 h-3 text-emerald-500" /> Active
+                          </div>
                         )}
                         <button 
                           onClick={() => handleReject(p._id)}
-                          className="bg-white hover:bg-red-50 text-red-500 border border-slate-100 px-8 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all hover:border-red-100"
+                          className="p-2 text-slate-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
                         >
-                          Reject
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
@@ -180,9 +187,9 @@ export default function AdminDashboard() {
             </table>
             
             {filteredPharmacies.length === 0 && (
-              <div className="py-32 flex flex-col items-center justify-center text-slate-300">
-                <span className="text-6xl mb-4 opacity-20">📂</span>
-                <p className="font-black uppercase tracking-widest text-xs">No entries found</p>
+              <div className="py-24 flex flex-col items-center justify-center text-slate-700">
+                <Clock className="w-10 h-10 mb-2 opacity-20" />
+                <p className="font-black uppercase tracking-[0.2em] text-[10px]">No Records Found</p>
               </div>
             )}
           </div>
@@ -193,15 +200,22 @@ export default function AdminDashboard() {
 }
 
 function StatCard({ title, value, icon, color }) {
+  const colors = {
+    blue: "text-blue-400 bg-blue-400/10 border-blue-400/20 shadow-blue-400/5",
+    indigo: "text-indigo-400 bg-indigo-400/10 border-indigo-400/20 shadow-indigo-400/5",
+    purple: "text-purple-400 bg-purple-400/10 border-purple-400/20 shadow-purple-400/5",
+    emerald: "text-emerald-400 bg-emerald-400/10 border-emerald-400/20 shadow-emerald-400/5",
+  };
+
   return (
-    <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 flex items-center gap-6 hover:shadow-2xl hover:shadow-slate-200/50 transition-all duration-500 group cursor-default">
-      <div className={`${color} text-white w-16 h-16 flex items-center justify-center rounded-[1.5rem] text-3xl shadow-xl transition-transform duration-500 group-hover:scale-110 group-hover:rotate-6`}>
-        {icon}
+    <div className="bg-slate-900/60 p-6 rounded-[2rem] border border-slate-800 transition-all duration-500 hover:-translate-y-1 hover:border-slate-700 group overflow-hidden">
+      <div className="flex justify-between items-start mb-4">
+        <div className={`p-3 rounded-2xl transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3 ${colors[color]}`}>
+          {icon}
+        </div>
       </div>
-      <div>
-        <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">{title}</p>
-        <h3 className="text-3xl font-black text-slate-900 tracking-tight">{value}</h3>
-      </div>
+      <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em] mb-1">{title}</p>
+      <h3 className="text-2xl font-black italic tracking-tighter text-slate-100">{value || 0}</h3>
     </div>
   );
 }

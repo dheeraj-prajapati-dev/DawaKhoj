@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast, Toaster } from 'react-hot-toast';
-import { UserPlus, Mail, Phone, Lock, Eye, EyeOff, Loader2, User, ChevronDown } from 'lucide-react';
+import { 
+  UserPlus, Mail, Phone, Lock, Eye, EyeOff, 
+  Loader2, User, ChevronDown, ShieldCheck, Activity 
+} from 'lucide-react';
 import { register } from '../services/auth.service';
 
 export default function Register() {
@@ -30,86 +33,141 @@ export default function Register() {
 
     try {
       await register(formData);
-      toast.success('Registration safal! Ab login karein.', {
-        style: { background: '#1e293b', color: '#fff', borderRadius: '15px' }
+      toast.success('Registration successful! Launching login...', {
+        style: { 
+          background: '#0f172a', 
+          color: '#fff', 
+          borderRadius: '20px',
+          border: '1px solid #3b82f6',
+          fontFamily: 'sans-serif',
+          fontWeight: 'bold'
+        }
       });
       setTimeout(() => navigate('/login'), 2000);
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Registration fail ho gaya.');
+      toast.error(err.response?.data?.message || 'Registration failed.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-950 p-4 font-sans text-white">
+    <div className="min-h-screen flex items-center justify-center bg-slate-950 p-4 font-sans text-white relative overflow-hidden">
       <Toaster position="top-center" />
       
-      {/* Background Decorative Blobs */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10">
-        <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-600/10 blur-[120px] rounded-full"></div>
-      </div>
+      {/* 🌌 Cyberpunk Background Elements */}
+      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-600/10 blur-[120px] rounded-full animate-pulse"></div>
+      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-600/10 blur-[120px] rounded-full"></div>
 
-      <div className="bg-slate-900/40 backdrop-blur-xl p-10 rounded-[3rem] shadow-2xl w-full max-w-md border border-slate-800/60 relative overflow-hidden my-8">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600/10 rounded-2xl mb-4 border border-blue-500/20 shadow-lg shadow-blue-500/5">
-            <UserPlus className="w-8 h-8 text-blue-500" />
+      <div className="bg-slate-900/40 backdrop-blur-2xl p-8 md:p-12 rounded-[3.5rem] shadow-2xl w-full max-w-md border border-slate-800/60 relative overflow-hidden my-8">
+        
+        {/* Glowing Top Bar */}
+        <div className={`absolute top-0 left-0 w-full h-1 transition-all duration-500 ${formData.role === 'pharmacy' ? 'bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]' : 'bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.5)]'}`}></div>
+
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-slate-950 rounded-[2rem] mb-6 border border-slate-800 shadow-inner group transition-all">
+            {formData.role === 'pharmacy' ? (
+              <ShieldCheck className="w-10 h-10 text-emerald-500 animate-bounce" />
+            ) : (
+              <Activity className="w-10 h-10 text-blue-500 animate-pulse" />
+            )}
           </div>
-          <h2 className="text-3xl font-black tracking-tighter italic">DawaKhoj<span className="text-blue-500">+</span></h2>
-          <p className="text-slate-500 mt-2 font-bold uppercase text-[10px] tracking-[0.3em]">Create Your Health Profile</p>
+          <h2 className="text-4xl font-black tracking-tighter italic uppercase">
+            DawaKhoj<span className={formData.role === 'pharmacy' ? 'text-emerald-500' : 'text-blue-500'}>+</span>
+          </h2>
+          <p className="text-slate-500 mt-2 font-black uppercase text-[10px] tracking-[0.4em] opacity-70">Initialize Security Protocol</p>
         </div>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1">
-            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-2">Account Type</label>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Account Type Selector */}
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-3">Access Level</label>
             <div className="relative">
               <select 
-                className="w-full p-4 bg-slate-950/50 rounded-2xl border border-slate-800 focus:border-blue-500 outline-none font-bold text-slate-300 cursor-pointer appearance-none transition-all"
+                className="w-full p-4 bg-slate-950/80 rounded-2xl border border-slate-800 focus:border-blue-500 outline-none font-black text-slate-200 cursor-pointer appearance-none transition-all text-xs tracking-widest uppercase italic"
                 value={formData.role}
                 onChange={e => setFormData({...formData, role: e.target.value})}
               >
-                <option value="patient" className="bg-slate-900">Patient (User) 👤</option>
-                <option value="pharmacy" className="bg-slate-900">Pharmacy Owner 🏥</option>
+                <option value="patient" className="bg-slate-900">Standard User (Patient)</option>
+                <option value="pharmacy" className="bg-slate-900">Commercial (Pharmacy)</option>
               </select>
-              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-600 pointer-events-none" />
+              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 pointer-events-none" />
             </div>
           </div>
 
-          <div className="relative group">
-            <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-600 group-focus-within:text-blue-500" />
-            <input type="text" placeholder="Pura Naam" className="w-full pl-12 pr-4 py-4 bg-slate-950/50 border border-slate-800 rounded-2xl outline-none focus:border-blue-500 text-white font-bold transition-all" 
-              value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required />
-          </div>
-          
-          <div className="relative group">
-            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-600 group-focus-within:text-blue-500" />
-            <input type="email" placeholder="Email Address" className="w-full pl-12 pr-4 py-4 bg-slate-950/50 border border-slate-800 rounded-2xl outline-none focus:border-blue-500 text-white font-bold transition-all" 
-              value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} required />
+          {/* Input Fields */}
+          <div className="space-y-4">
+            <div className="relative group">
+              <User className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-blue-500 transition-colors" />
+              <input 
+                type="text" 
+                placeholder="FULL NAME" 
+                className="w-full pl-14 pr-6 py-4 bg-slate-950/50 border border-slate-800 rounded-2xl outline-none focus:border-blue-500 text-white font-bold transition-all placeholder:text-slate-700 text-sm" 
+                value={formData.name} 
+                onChange={e => setFormData({...formData, name: e.target.value})} 
+                required 
+              />
+            </div>
+            
+            <div className="relative group">
+              <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-blue-500 transition-colors" />
+              <input 
+                type="email" 
+                placeholder="EMAIL ADDRESS" 
+                className="w-full pl-14 pr-6 py-4 bg-slate-950/50 border border-slate-800 rounded-2xl outline-none focus:border-blue-500 text-white font-bold transition-all placeholder:text-slate-700 text-sm" 
+                value={formData.email} 
+                onChange={e => setFormData({...formData, email: e.target.value})} 
+                required 
+              />
+            </div>
+
+            <div className="relative group">
+              <Phone className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-blue-500 transition-colors" />
+              <input 
+                type="tel" 
+                placeholder="MOBILE NUMBER" 
+                className="w-full pl-14 pr-6 py-4 bg-slate-950/50 border border-slate-800 rounded-2xl outline-none focus:border-blue-500 text-white font-bold transition-all placeholder:text-slate-700 text-sm" 
+                value={formData.phone} 
+                onChange={handlePhoneChange} 
+                required 
+              />
+            </div>
+
+            <div className="relative group">
+              <Lock className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-blue-500 transition-colors" />
+              <input 
+                type={showPassword ? "text" : "password"} 
+                placeholder="SECURITY KEY" 
+                className="w-full pl-14 pr-14 py-4 bg-slate-950/50 border border-slate-800 rounded-2xl outline-none focus:border-blue-500 text-white font-bold transition-all placeholder:text-slate-700 text-sm" 
+                value={formData.password} 
+                onChange={e => setFormData({...formData, password: e.target.value})} 
+                required 
+              />
+              <button 
+                type="button" 
+                onClick={() => setShowPassword(!showPassword)} 
+                className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-600 hover:text-white transition-all"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
 
-          <div className="relative group">
-            <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-600 group-focus-within:text-blue-500" />
-            <input type="tel" placeholder="Mobile Number" className="w-full pl-12 pr-4 py-4 bg-slate-950/50 border border-slate-800 rounded-2xl outline-none focus:border-blue-500 text-white font-bold transition-all" 
-              value={formData.phone} onChange={handlePhoneChange} required />
-          </div>
-
-          <div className="relative group">
-            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-600 group-focus-within:text-blue-500" />
-            <input type={showPassword ? "text" : "password"} placeholder="Set Password" className="w-full pl-12 pr-12 py-4 bg-slate-950/50 border border-slate-800 rounded-2xl outline-none focus:border-blue-500 text-white font-bold transition-all" 
-              value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} required />
-            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-600 hover:text-white transition-all">
-              {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-            </button>
-          </div>
-
-          <button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-900/20 transition-all active:scale-[0.98] uppercase tracking-widest text-xs flex items-center justify-center gap-2">
-            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Create Account'}
+          <button 
+            type="submit" 
+            disabled={loading} 
+            className={`w-full ${formData.role === 'pharmacy' ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/20' : 'bg-blue-600 hover:bg-blue-500 shadow-blue-900/20'} text-white font-black py-5 rounded-[2rem] shadow-xl transition-all active:scale-[0.98] uppercase tracking-[0.2em] text-[10px] flex items-center justify-center gap-2 mt-4`}
+          >
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Create Profile'}
           </button>
         </form>
 
-        <p className="text-center mt-8 text-xs text-slate-500 font-bold uppercase tracking-widest">
-          Pehle se account hai? <Link to="/login" className="text-blue-500 font-black hover:text-blue-400 ml-1">Login</Link>
-        </p>
+        <div className="mt-10 pt-6 border-t border-slate-800 text-center">
+          <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">
+            Existing Member? 
+            <Link to="/login" className="text-blue-500 hover:text-blue-400 ml-2 transition-colors">Authorize Here</Link>
+          </p>
+        </div>
       </div>
     </div>
   );

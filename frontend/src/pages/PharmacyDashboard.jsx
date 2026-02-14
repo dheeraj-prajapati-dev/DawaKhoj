@@ -2,7 +2,11 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
 import { toast, Toaster } from "react-hot-toast";
-import { API } from "../context/AuthContext"; // 🔥 Cookie-based API instance
+import { API } from "../context/AuthContext";
+import { 
+  Package, AlertTriangle, Clock, IndianRupee, 
+  ChevronRight, Activity, BellRing, Settings2, ShoppingBag
+} from "lucide-react";
 
 export default function PharmacyDashboard() {
   const [stats, setStats] = useState({
@@ -16,17 +20,13 @@ export default function PharmacyDashboard() {
   const [recentOrders, setRecentOrders] = useState([]);
   const navigate = useNavigate();
 
-  // 🔔 Bell Sound Logic
   const playNotification = useCallback(() => {
     const audio = new Audio("/bell.mp3");
-    audio.play().catch(err => {
-      console.log("Audio play blocked. Click anywhere on the dashboard first.", err);
-    });
+    audio.play().catch(err => console.log("Audio blocked", err));
   }, []);
 
   const fetchData = async () => {
     try {
-      // 🔥 Headers ki zarurat nahi, API instance cookies handle karega
       const [statsRes, ordersRes] = await Promise.all([
         API.get("/orders/stats"),
         API.get("/orders/pharmacy-orders")
@@ -41,7 +41,6 @@ export default function PharmacyDashboard() {
       }
 
       if (ordersRes.data.success) {
-        // Active orders: Pending ya Accepted
         const activeOrders = ordersRes.data.orders.filter(
             o => o.status === 'Pending' || o.status === 'Accepted'
         );
@@ -49,45 +48,28 @@ export default function PharmacyDashboard() {
       }
     } catch (err) {
       console.error("Dashboard Fetch Error:", err);
-      if (err.response?.status === 401) {
-        toast.error("Session expired. Please login again.");
-      }
     }
   };
 
   useEffect(() => {
     fetchData();
-
-    // Socket Connection with credentials for cookies
     const socket = io("https://dawakhoj.onrender.com", {
       transports: ["websocket", "polling"],
       withCredentials: true
     });
 
-    if (stats.pharmacyId) {
-      socket.emit("join_room", stats.pharmacyId);
-    }
+    if (stats.pharmacyId) socket.emit("join_room", stats.pharmacyId);
 
     socket.on("new_order_alert", (data) => {
       playNotification();
       toast.success(`📦 ${data.message}`, {
-        duration: 8000,
-        icon: '🚀',
-        style: { border: '2px solid #2563eb', padding: '16px', fontWeight: 'bold' }
+        style: { background: '#1e293b', color: '#fff', border: '1px solid #3b82f6' }
       });
       fetchData(); 
     });
 
-    socket.on("search_alert", (data) => {
-      toast(data.message, {
-        icon: '🔍',
-        style: { borderRadius: '10px', background: '#333', color: '#fff' }
-      });
-    });
-
     return () => {
       socket.off("new_order_alert");
-      socket.off("search_alert");
       socket.disconnect();
     };
   }, [stats.pharmacyId, playNotification]);
@@ -100,120 +82,115 @@ export default function PharmacyDashboard() {
         fetchData();
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || "Update Failed");
+      toast.error("Update Failed");
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6" onClick={() => console.log("Dashboard Active")}>
-      <Toaster position="top-right" reverseOrder={false} />
+    <div className="min-h-screen bg-slate-950 p-4 md:p-8 font-sans text-white relative overflow-hidden">
+      <Toaster position="top-right" />
       
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
+      {/* Background Glows */}
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-600/5 blur-[120px] rounded-full -z-10"></div>
+      
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800 tracking-tight">Pharmacy Dashboard 🏥</h1>
-          <p className="text-sm text-gray-500">Real-time monitoring active ⚡</p>
+          <h1 className="text-3xl font-black tracking-tighter italic flex items-center gap-3">
+            PHARMACY <span className="text-blue-500">DASHBOARD</span> 
+            <Activity className="text-emerald-500 w-6 h-6 animate-pulse" />
+          </h1>
+          <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] mt-1">Real-time Monitoring Active ⚡</p>
         </div>
-        <div className="flex gap-2">
-           <button onClick={playNotification} className="bg-white border text-gray-700 px-3 py-2 rounded-lg text-xs font-bold hover:bg-gray-50 transition-all shadow-sm">
-             🔊 Test Sound
-          </button>
-          <button onClick={() => navigate("/pharmacy/inventory")} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all font-bold shadow-md">
+        
+        <div className="flex gap-3">
+          <button 
+            onClick={() => navigate("/pharmacy/inventory")}
+            className="group flex items-center gap-2 bg-slate-900 border border-slate-800 px-5 py-3 rounded-2xl hover:border-blue-500/50 transition-all font-bold text-sm tracking-tight"
+          >
+            <Settings2 className="w-4 h-4 text-slate-500 group-hover:text-blue-500" />
             Manage Inventory
           </button>
+          <button 
+            onClick={() => navigate("/pharmacy/orders")}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 px-5 py-3 rounded-2xl transition-all font-black text-sm uppercase tracking-widest shadow-xl shadow-blue-900/20"
+          >
+            <ShoppingBag className="w-4 h-4" />
+            Orders
+          </button>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
-        <DashboardCard title="Total Medicines" value={stats.totalMedicines} />
-        <DashboardCard title="Low Stock" value={stats.lowStock} warning={stats.lowStock > 0} />
-        <DashboardCard title="Out of Stock" value={stats.outOfStock} danger={stats.outOfStock > 0} />
-        <DashboardCard title="Pending Orders" value={stats.pendingOrders} blink={stats.pendingOrders > 0} />
-        <DashboardCard title="Revenue" value={`₹ ${stats.revenue}`} />
+      {/* Stats Cards Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-10">
+        <StatCard title="Total Inventory" value={stats.totalMedicines} icon={<Package />} color="blue" />
+        <StatCard title="Low Stock" value={stats.lowStock} icon={<AlertTriangle />} color="orange" alert={stats.lowStock > 0} />
+        <StatCard title="Out of Stock" value={stats.outOfStock} icon={<AlertTriangle />} color="red" alert={stats.outOfStock > 0} />
+        <StatCard title="Pending" value={stats.pendingOrders} icon={<Clock />} color="blue" pulse={stats.pendingOrders > 0} />
+        <StatCard title="Total Revenue" value={`₹${stats.revenue}`} icon={<IndianRupee />} color="emerald" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Orders Table */}
-        <div className="lg:col-span-2 bg-white rounded-xl p-5 shadow-sm border border-gray-200">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="font-bold text-lg text-gray-800 uppercase tracking-tighter">New Tasks</h2>
-            <button onClick={() => navigate("/pharmacy/orders")} className="text-blue-600 text-sm font-bold hover:underline">Full History</button>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Main Orders Board */}
+        <div className="lg:col-span-2 bg-slate-900/40 backdrop-blur-xl rounded-[2.5rem] p-8 border border-slate-800/60 shadow-2xl relative overflow-hidden">
+          <div className="flex justify-between items-center mb-8">
+            <h2 className="text-xl font-black italic uppercase tracking-tight">Active Tasks</h2>
+            <div className="h-[1px] flex-grow mx-6 bg-slate-800 hidden md:block"></div>
+            <button onClick={() => navigate("/pharmacy/orders")} className="text-blue-500 text-[10px] font-black uppercase tracking-widest hover:text-blue-400">View History</button>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-gray-50 text-gray-400 uppercase text-[10px] font-black">
-                <tr>
-                  <th className="p-3">Customer</th>
-                  <th className="p-3">Medicine</th>
-                  <th className="p-3 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {recentOrders.map(order => (
-                  <tr key={order._id} className="hover:bg-gray-50 transition-colors group">
-                    <td className="p-3">
-                      <p className="font-black text-gray-800 group-hover:text-blue-600">{order.user?.name || "Customer"}</p>
-                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">📍 {order.user?.address?.city || "Silvassa"}</p>
-                    </td>
-                    <td className="p-3 font-bold text-gray-700 italic">{order.medicineName}</td>
-                    <td className="p-3">
-                      <div className="flex gap-2 justify-end">
-                        {order.status === 'Pending' ? (
-                          <>
-                            <button 
-                              onClick={() => handleUpdateStatus(order._id, 'Accepted')}
-                              className="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-black hover:bg-blue-700 shadow-lg shadow-blue-100 uppercase tracking-wider"
-                            >
-                              ACCEPT
-                            </button>
-                            <button 
-                              onClick={() => handleUpdateStatus(order._id, 'Rejected')}
-                              className="bg-white border-2 border-red-100 text-red-500 px-3 py-1.5 rounded-lg text-[10px] font-black hover:bg-red-50 uppercase tracking-wider"
-                            >
-                              REJECT
-                            </button>
-                          </>
-                        ) : (
-                          <button 
-                            onClick={() => handleUpdateStatus(order._id, 'Delivered')}
-                            className="bg-emerald-600 text-white px-4 py-1.5 rounded-lg text-[10px] font-black hover:bg-emerald-700 shadow-lg shadow-emerald-100 animate-pulse uppercase tracking-wider"
-                          >
-                            MARK DELIVERED
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {recentOrders.length === 0 && (
-                <div className="text-center py-20 bg-gray-50/50 rounded-xl mt-2 border-2 border-dashed">
-                    <p className="text-gray-400 font-bold uppercase tracking-[0.2em] text-xs">Waiting for new orders... ✨</p>
+
+          <div className="space-y-4">
+            {recentOrders.map(order => (
+              <div key={order._id} className="flex flex-col md:flex-row items-center justify-between p-5 bg-slate-950/50 border border-slate-800/50 rounded-3xl group hover:border-blue-500/30 transition-all duration-500">
+                <div className="flex items-center gap-4 w-full md:w-auto">
+                  <div className="w-12 h-12 bg-blue-600/10 rounded-2xl flex items-center justify-center text-blue-500 font-black italic">
+                    {order.user?.name?.charAt(0) || "C"}
+                  </div>
+                  <div>
+                    <h4 className="font-black text-slate-200 group-hover:text-white transition-colors uppercase text-sm tracking-tight">{order.user?.name || "Anonymous User"}</h4>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Medicine: <span className="text-blue-400 italic">{order.medicineName}</span></p>
+                  </div>
                 </div>
+
+                <div className="flex gap-2 mt-4 md:mt-0 w-full md:w-auto">
+                  {order.status === 'Pending' ? (
+                    <>
+                      <button onClick={() => handleUpdateStatus(order._id, 'Accepted')} className="flex-grow md:flex-none bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">Accept</button>
+                      <button onClick={() => handleUpdateStatus(order._id, 'Rejected')} className="bg-slate-800 hover:bg-red-900/20 text-slate-400 hover:text-red-500 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">Decline</button>
+                    </>
+                  ) : (
+                    <button onClick={() => handleUpdateStatus(order._id, 'Delivered')} className="w-full md:w-auto bg-emerald-600/10 border border-emerald-500/20 text-emerald-500 px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest animate-pulse">Mark Delivered</button>
+                  )}
+                </div>
+              </div>
+            ))}
+
+            {recentOrders.length === 0 && (
+              <div className="text-center py-24 bg-slate-950/20 border-2 border-dashed border-slate-800 rounded-[2rem]">
+                <Clock className="w-12 h-12 text-slate-800 mx-auto mb-4" />
+                <p className="text-slate-600 font-bold uppercase tracking-[0.2em] text-[10px]">Awaiting New Orders...</p>
+              </div>
             )}
           </div>
         </div>
 
-        {/* Right Sidebar */}
+        {/* Sidebar Status */}
         <div className="space-y-6">
-          <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
-            <h2 className="font-bold text-sm mb-4 text-gray-400 uppercase tracking-widest">Connection Status</h2>
-            <div className="flex items-center gap-3 bg-emerald-50 p-4 rounded-xl border border-emerald-100">
-              <span className="h-3 w-3 rounded-full bg-emerald-500 animate-ping"></span>
-              <span className="text-xs font-black text-emerald-700 uppercase tracking-widest">System Online</span>
+          <div className="bg-slate-900/40 backdrop-blur-xl rounded-[2.5rem] p-8 border border-slate-800/60">
+            <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-6">System Health</h3>
+            <div className="space-y-4">
+              <StatusIndicator label="Network" status="Optimal" active />
+              <StatusIndicator label="Socket Server" status="Connected" active />
+              <StatusIndicator label="Database" status="Syncing" active />
             </div>
           </div>
           
-          <div className="bg-blue-600 rounded-2xl p-6 shadow-xl shadow-blue-200 text-white relative overflow-hidden group">
-             <div className="relative z-10">
-               <h3 className="font-black text-xs uppercase tracking-widest opacity-70">Admin Tip</h3>
-               <p className="text-sm mt-3 font-medium leading-relaxed italic">
-                 "Bhai, fast response se Store Rating badhti hai! 🚀"
-               </p>
-             </div>
-             <div className="absolute -right-4 -bottom-4 text-8xl opacity-10 group-hover:rotate-12 transition-transform">⚡</div>
+          <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-[2.5rem] p-8 shadow-2xl shadow-blue-900/40 relative overflow-hidden group cursor-pointer" onClick={playNotification}>
+            <BellRing className="absolute -right-6 -bottom-6 w-32 h-32 text-white/10 group-hover:rotate-12 transition-transform" />
+            <h3 className="text-xs font-black uppercase tracking-[0.2em] mb-4">Notification Center</h3>
+            <p className="text-sm font-bold leading-relaxed italic text-blue-50 underline decoration-blue-400 underline-offset-4 decoration-2">
+              Test Alert System
+            </p>
           </div>
         </div>
       </div>
@@ -221,26 +198,35 @@ export default function PharmacyDashboard() {
   );
 }
 
-function DashboardCard({ title, value, danger, warning, blink }) {
+// Sub-components for better readability
+function StatCard({ title, value, icon, color, alert, pulse }) {
+  const colors = {
+    blue: "text-blue-500 bg-blue-500/10 border-blue-500/20 shadow-blue-500/5",
+    orange: "text-orange-500 bg-orange-500/10 border-orange-500/20 shadow-orange-500/5",
+    red: "text-red-500 bg-red-500/10 border-red-500/20 shadow-red-500/5",
+    emerald: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20 shadow-emerald-500/5",
+  };
+
   return (
-    <div className={`bg-white rounded-2xl p-6 shadow-sm border-b-[6px] transition-all duration-500 hover:-translate-y-1 hover:shadow-xl ${
-      danger ? 'border-red-500' : 
-      warning ? 'border-orange-500' : 
-      blink ? 'border-blue-600 shadow-blue-50' : 
-      'border-gray-200'
-    }`}>
-      <p className="text-[10px] text-gray-400 mb-2 uppercase font-black tracking-[0.2em]">{title}</p>
-      <h3 className={`text-3xl font-black tracking-tighter ${danger ? 'text-red-600' : warning ? 'text-orange-600' : blink ? 'text-blue-700' : 'text-gray-800'}`}>
-        {value}
-      </h3>
-      {(warning || blink) && (
-        <div className="flex items-center gap-1.5 mt-3">
-            <span className={`h-1.5 w-1.5 rounded-full ${warning ? 'bg-orange-500' : 'bg-blue-500'} animate-ping`}></span>
-            <p className={`text-[10px] font-black uppercase tracking-widest italic ${warning ? 'text-orange-600' : 'text-blue-600'}`}>
-              {warning ? 'Action Required!' : 'Processing...'}
-            </p>
-        </div>
-      )}
+    <div className={`bg-slate-900/60 p-6 rounded-[2rem] border border-slate-800 transition-all duration-500 hover:border-slate-700 hover:-translate-y-1 relative group overflow-hidden ${alert ? 'ring-2 ring-red-500/20 ring-offset-4 ring-offset-slate-950' : ''}`}>
+      <div className="flex justify-between items-start mb-4">
+        <div className={`p-3 rounded-2xl ${colors[color]}`}>{icon}</div>
+        {pulse && <div className="h-2 w-2 rounded-full bg-blue-500 animate-ping"></div>}
+      </div>
+      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">{title}</p>
+      <h3 className="text-3xl font-black italic tracking-tighter text-slate-100">{value}</h3>
+    </div>
+  );
+}
+
+function StatusIndicator({ label, status, active }) {
+  return (
+    <div className="flex items-center justify-between p-4 bg-slate-950/40 rounded-2xl border border-slate-800/50">
+      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</span>
+      <div className="flex items-center gap-2">
+        <div className={`w-1.5 h-1.5 rounded-full ${active ? 'bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-700'}`}></div>
+        <span className="text-[10px] font-black text-slate-200 uppercase">{status}</span>
+      </div>
     </div>
   );
 }

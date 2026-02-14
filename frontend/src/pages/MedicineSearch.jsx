@@ -1,7 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { API } from '../context/AuthContext';
 import { toast, Toaster } from 'react-hot-toast';
-import { useNavigate, useLocation } from 'react-router-dom'; // Added useLocation
+import { useNavigate, useLocation } from 'react-router-dom';
+import { 
+  Search, MapPin, Navigation, 
+  ArrowUpDown, CheckCircle2, PackageX,
+  ChevronLeft, Filter, Loader2
+} from 'lucide-react';
 
 const MedicineSearch = () => {
   const [query, setQuery] = useState('');
@@ -13,9 +18,8 @@ const MedicineSearch = () => {
   const [lastOrder, setLastOrder] = useState(null);
   
   const navigate = useNavigate();
-  const location = useLocation(); // Hook to access URL params
+  const location = useLocation();
 
-  // 🔥 URL se category extract karna (e.g., /search?category=Baby%20Care)
   const searchParams = new URLSearchParams(location.search);
   const activeCategory = searchParams.get('category');
 
@@ -23,18 +27,14 @@ const MedicineSearch = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          setUserCoords({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          });
+          setUserCoords({ lat: position.coords.latitude, lng: position.coords.longitude });
         },
-        () => toast.error("Please enable location access.")
+        () => toast.error("Please enable location access for accurate results.")
       );
     }
   }, []);
 
   const performSearch = async () => {
-    // 🔥 Search tabhi trigger hoga jab query 2 chars se badi ho YA koi category selected ho
     if ((query.trim().length <= 2 && !activeCategory) || !userCoords) {
       setResults([]);
       return;
@@ -45,7 +45,7 @@ const MedicineSearch = () => {
       const res = await API.get('/search/medicine', {
         params: { 
           q: query,
-          category: activeCategory, // 🔥 YEH LINE MISSING THI - Ab category filter kaam karega
+          category: activeCategory,
           lat: userCoords.lat,
           lng: userCoords.lng
         }
@@ -54,14 +54,12 @@ const MedicineSearch = () => {
         setResults(res.data.results || []);
       }
     } catch (err) {
-      console.error("Search failed:", err);
       toast.error("Failed to fetch results.");
     } finally {
       setLoading(false);
     }
   };
 
-  // 🔥 Dependency array mein activeCategory add kiya taaki category badalne par turant search ho
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       performSearch();
@@ -106,101 +104,149 @@ const MedicineSearch = () => {
   };
 
   return (
-    <div className="p-6 max-w-5xl mx-auto min-h-screen bg-gray-50/50 font-sans">
+    <div className="min-h-screen bg-slate-950 text-white p-4 md:p-8 font-sans overflow-x-hidden">
       <Toaster position="top-center" />
 
-      {/* Confirmation Modal */}
+      {/* 🚀 Modern Confirmation Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-[2.5rem] p-10 max-w-sm w-full text-center shadow-2xl">
-            <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">✅</div>
-            <h2 className="text-3xl font-black text-gray-900 mb-2 tracking-tighter uppercase italic">Confirmed!</h2>
-            <p className="text-gray-500 mb-8 text-sm font-medium">Order for <span className="text-blue-600 font-bold">{lastOrder?.medicineName}</span> placed.</p>
-            <button onClick={() => { setShowModal(false); navigate('/my-orders'); }} className="w-full bg-gray-900 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest">TRACK ORDER 📦</button>
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center z-[100] p-6 animate-in fade-in zoom-in duration-300">
+          <div className="bg-slate-900 border border-blue-500/30 rounded-[3rem] p-10 max-w-sm w-full text-center shadow-[0_0_50px_rgba(37,99,235,0.2)]">
+            <div className="w-20 h-20 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+               <CheckCircle2 className="w-10 h-10" />
+            </div>
+            <h2 className="text-3xl font-black mb-2 tracking-tighter uppercase italic">Confirmed!</h2>
+            <p className="text-slate-400 mb-8 text-sm font-medium leading-relaxed">
+              Order for <span className="text-blue-400 font-bold">{lastOrder?.medicineName}</span> placed successfully.
+            </p>
+            <button 
+              onClick={() => { setShowModal(false); navigate('/my-orders'); }} 
+              className="w-full bg-blue-600 hover:bg-blue-500 text-white py-5 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all"
+            >
+              Track Your Order 📦
+            </button>
           </div>
         </div>
       )}
 
-      <header className="text-center mb-8">
-        <h1 className="text-5xl font-black text-blue-600 italic tracking-tighter cursor-pointer" onClick={() => navigate('/')}>DawaKhoj+</h1>
-        {/* 🔥 Active Category Indicator */}
-        {activeCategory && (
-          <div className="mt-4">
-            <span className="bg-blue-100 text-blue-700 px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest">
-              Filtering: {activeCategory}
-            </span>
-          </div>
-        )}
-      </header>
-      
-      <div className="sticky top-4 z-40 bg-gray-50/80 backdrop-blur-md pb-4">
-        <div className="relative mb-6">
-          <div className="flex gap-2 shadow-2xl p-2 bg-white rounded-3xl border-2 border-transparent focus-within:border-blue-500 transition-all">
-            <input 
-              className="flex-1 p-4 outline-none text-lg bg-transparent font-medium" 
-              placeholder={activeCategory ? `Search in ${activeCategory}...` : "Search medicine..."}
-              value={query} 
-              onChange={(e) => setQuery(e.target.value)} 
-            />
-            <div className="flex items-center px-6">{loading ? <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div> : "🔍"}</div>
-          </div>
-        </div>
-
-        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
-          {[{ id: 'price-low', label: 'Cheapest 💰' }, { id: 'distance', label: 'Nearest 📍' }, { id: 'price-high', label: 'Premium 📈' }].map((filter) => (
-            <button key={filter.id} onClick={() => setSortBy(filter.id)} className={`whitespace-nowrap px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border-2 ${sortBy === filter.id ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-400 border-gray-100'}`}>
-              {filter.label}
+      {/* Header & Sticky Search Area */}
+      <header className="max-w-5xl mx-auto mb-8 flex flex-col items-center">
+        <div className="flex items-center justify-between w-full mb-8">
+            <button onClick={() => navigate('/')} className="p-3 bg-slate-900 rounded-2xl border border-slate-800 hover:bg-slate-800 transition-all">
+                <ChevronLeft className="w-5 h-5 text-slate-400" />
             </button>
-          ))}
+            <h1 className="text-3xl font-black text-white italic tracking-tighter">DawaKhoj<span className="text-blue-500">+</span></h1>
+            <div className="w-10"></div> {/* Spacer */}
         </div>
-      </div>
 
-      <div className="space-y-10 mt-8">
-        {sortedResults.length > 0 ? sortedResults.map((group, idx) => (
-          <div key={idx}>
-            <div className="flex items-center gap-4 mb-6">
-              <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] bg-gray-100 px-3 py-1 rounded-md">Brand: {group.brand}</h2>
-              <div className="h-[1px] bg-gray-200 w-full"></div>
+        {/* 🔍 Dynamic Search Bar */}
+        <div className="w-full sticky top-4 z-40 space-y-4 mb-6">
+            <div className="relative group">
+                <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none">
+                    {loading ? <Loader2 className="w-5 h-5 text-blue-500 animate-spin" /> : <Search className="w-5 h-5 text-slate-500 group-focus-within:text-blue-500 transition-colors" />}
+                </div>
+                <input 
+                    className="w-full bg-slate-900/60 backdrop-blur-2xl border border-slate-800 rounded-[2rem] pl-16 pr-8 py-5 text-lg font-bold outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/5 transition-all shadow-2xl placeholder:text-slate-600"
+                    placeholder={activeCategory ? `Search in ${activeCategory}...` : "Dawa ka naam likhein..."}
+                    value={query} 
+                    onChange={(e) => setQuery(e.target.value)} 
+                />
             </div>
+
+            {/* Filter Chips */}
+            <div className="flex gap-3 overflow-x-auto no-scrollbar py-2">
+                <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl text-slate-500 mr-2">
+                    <Filter className="w-3 h-3" />
+                </div>
+                {[
+                  { id: 'price-low', label: 'Cheapest', icon: '💰' }, 
+                  { id: 'distance', label: 'Nearest', icon: '📍' }, 
+                  { id: 'price-high', label: 'Premium', icon: '📈' }
+                ].map((filter) => (
+                    <button 
+                        key={filter.id} 
+                        onClick={() => setSortBy(filter.id)} 
+                        className={`whitespace-nowrap flex items-center gap-2 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${sortBy === filter.id ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40' : 'bg-slate-900 text-slate-400 border border-slate-800 hover:border-slate-700'}`}
+                    >
+                        <span>{filter.icon}</span> {filter.label}
+                    </button>
+                ))}
+            </div>
+        </div>
+      </header>
+
+      {/* Search Results */}
+      <main className="max-w-5xl mx-auto space-y-12 pb-20">
+        {sortedResults.length > 0 ? sortedResults.map((group, idx) => (
+          <div key={idx} className="animate-in slide-in-from-bottom-4 duration-500">
+            <div className="flex items-center gap-4 mb-8">
+              <span className="text-[10px] font-black text-blue-500 bg-blue-500/10 px-4 py-1.5 rounded-full uppercase tracking-[0.2em] border border-blue-500/20 shadow-sm">
+                BRAND: {group.brand}
+              </span>
+              <div className="h-[1px] bg-slate-900 flex-1"></div>
+            </div>
+
             <div className="grid gap-6">
               {group.options.map((item, i) => (
-                <div key={i} className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-50 hover:border-blue-300 transition-all flex flex-col md:flex-row justify-between items-center gap-6">
-                  <div className="flex-1">
-                    <h3 className="font-black text-3xl text-gray-800 italic uppercase">{item.medicineName}</h3>
-                    <p className="text-blue-600 font-black text-xs uppercase">🏪 {item.pharmacy}</p>
-                    <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">
-                      📍 { (typeof item.distance === 'number' && item.distance >= 0) 
-                        ? `APPROX. ${item.distance.toFixed(1)} KM AWAY` 
-                        : 'DISTANCE NOT AVAILABLE' }
-                    </p>
-                    {/* Category Label for Confirmation */}
-                    <p className="text-[9px] bg-gray-50 text-gray-400 w-fit px-2 py-0.5 rounded mt-2 uppercase font-bold">Category: {item.category}</p>
+                <div key={i} className="group bg-slate-900/40 backdrop-blur-xl rounded-[2.5rem] border border-slate-800/60 hover:border-blue-500/30 hover:bg-slate-900 transition-all duration-500 flex flex-col md:flex-row justify-between items-stretch md:items-center p-8 gap-8 relative overflow-hidden">
+                  
+                  {/* Stock Indicator Light */}
+                  <div className={`absolute left-0 top-0 w-1 h-full ${item.stock > 0 ? 'bg-blue-500' : 'bg-slate-700'}`}></div>
+
+                  <div className="flex-1 space-y-4">
+                    <div>
+                        <h3 className="font-black text-4xl text-slate-100 italic uppercase tracking-tighter group-hover:text-white transition-colors">
+                            {item.medicineName}
+                        </h3>
+                        <div className="flex flex-wrap gap-4 mt-3">
+                            <span className="flex items-center gap-1.5 text-blue-400 text-[10px] font-black uppercase tracking-widest">
+                                <CheckCircle2 className="w-3 h-3" /> {item.pharmacy}
+                            </span>
+                            <span className="flex items-center gap-1.5 text-slate-500 text-[10px] font-black uppercase tracking-widest">
+                                <Navigation className="w-3 h-3" /> { (typeof item.distance === 'number') ? `${item.distance.toFixed(1)} KM` : 'N/A' }
+                            </span>
+                            <span className="bg-slate-950 px-2 py-1 rounded text-[9px] text-slate-600 font-bold uppercase border border-slate-800">
+                                {item.category}
+                            </span>
+                        </div>
+                    </div>
                     
-                    <div className="flex gap-2 mt-6">
+                    <div className="flex flex-wrap gap-3 pt-2">
                       <button 
                         onClick={() => handleOrder(item)} 
                         disabled={item.stock === 0} 
-                        className={`px-8 py-3 rounded-2xl text-[10px] font-black tracking-widest ${item.stock > 0 ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+                        className={`px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 ${item.stock > 0 ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-xl shadow-blue-900/20 active:scale-95' : 'bg-slate-800 text-slate-600 cursor-not-allowed'}`}
                       >
-                        {item.stock > 0 ? 'ORDER NOW ⚡' : 'OUT OF STOCK'}
+                        {item.stock > 0 ? (<><ArrowUpDown className="w-3 h-3" /> Order Now</>) : 'Out of Stock'}
                       </button>
-                      <button onClick={() => getDirections(item.pharmacy)} className="bg-white text-gray-900 border-2 border-gray-100 px-6 py-3 rounded-2xl text-[10px] font-black">MAPS 🚩</button>
+                      <button onClick={() => getDirections(item.pharmacy)} className="bg-slate-950 text-slate-400 border border-slate-800 px-6 py-4 rounded-2xl text-[10px] font-black uppercase hover:text-white hover:border-slate-600 transition-all">
+                        Directions 🚩
+                      </button>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-5xl font-black text-gray-900"><span className="text-2xl text-green-600">₹</span>{item.price}</p>
+
+                  <div className="flex flex-col items-end justify-center border-t md:border-t-0 border-slate-800 pt-6 md:pt-0">
+                    <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1">Total Price</p>
+                    <div className="flex items-start gap-1">
+                        <span className="text-xl font-black text-emerald-500 mt-1">₹</span>
+                        <p className="text-6xl font-black text-white italic tracking-tighter">{item.price}</p>
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
           </div>
         )) : (query.length > 2 || activeCategory) && !loading && (
-          <div className="text-center mt-20">
-            <p className="text-gray-400 font-bold text-xl uppercase tracking-tighter">No medicine found in this category.</p>
-            <button onClick={() => navigate('/search')} className="mt-4 text-blue-600 font-black text-xs underline">CLEAR ALL FILTERS</button>
+          <div className="flex flex-col items-center justify-center mt-32 space-y-6">
+            <div className="w-24 h-24 bg-slate-900 rounded-[2.5rem] flex items-center justify-center border border-slate-800">
+                <PackageX className="w-12 h-12 text-slate-700" />
+            </div>
+            <div className="text-center">
+                <p className="text-slate-500 font-black text-xl uppercase tracking-tighter italic">Stock Not Available</p>
+                <button onClick={() => { setQuery(''); navigate('/search'); }} className="mt-4 text-blue-500 font-black text-[10px] uppercase tracking-widest border-b border-blue-500/30 hover:border-blue-500 transition-all">Reset All Filters</button>
+            </div>
           </div>
         )}
-      </div>
+      </main>
     </div>
   );
 };
