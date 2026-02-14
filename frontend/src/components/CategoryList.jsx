@@ -8,26 +8,34 @@ const categories = [
   { id: 6, name: 'Supplements', icon: '🍎', color: 'from-red-500/10 to-red-600/5', border: 'border-red-500/20' },
   { id: 7, name: 'Ayurvedic', icon: '🌿', color: 'from-green-500/10 to-green-600/5', border: 'border-green-500/20' },
   { id: 8, name: 'First Aid', icon: '🩹', color: 'from-rose-500/10 to-rose-600/5', border: 'border-rose-500/20' },
+  // Aap yahan aur categories add kar sakte hain, grid automatically adjust ho jayega
 ];
 
-const CategoryList = () => {
+// 🔥 Added isFullPage prop to control the "View All" button visibility
+const CategoryList = ({ isFullPage = false }) => {
   const navigate = useNavigate();
 
   return (
-    <section className="py-16 px-6 max-w-7xl mx-auto">
+    <section className={`py-16 px-6 max-w-7xl mx-auto ${isFullPage ? 'min-h-screen' : ''}`}>
       <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
         <div>
           <h2 className="text-4xl font-black text-white tracking-tighter italic uppercase">
             Shop by <span className="text-blue-500">Category</span>
           </h2>
-          <p className="text-gray-500 font-medium mt-2">Dawaon ke alawa baki zarurat ka saman yahan se browse karein.</p>
+          <p className="text-gray-500 font-medium mt-2">
+            {isFullPage ? 'Hamari saari categories yahan browse karein.' : 'Dawaon ke alawa baki zarurat ka saman yahan se browse karein.'}
+          </p>
         </div>
-        <button 
-          onClick={() => navigate('/search')}
-          className="bg-blue-600/10 text-blue-400 border border-blue-500/20 px-6 py-2 rounded-full text-[10px] font-black tracking-[0.2em] hover:bg-blue-600 hover:text-white transition-all duration-300"
-        >
-          VIEW ALL PRODUCTS
-        </button>
+
+        {/* 🔥 Conditional Rendering: Button sirf tab dikhega jab isFullPage false ho */}
+        {!isFullPage && (
+          <button 
+            onClick={() => navigate('/categories')}
+            className="bg-blue-600/10 text-blue-400 border border-blue-500/20 px-6 py-2 rounded-full text-[10px] font-black tracking-[0.2em] hover:bg-blue-600 hover:text-white transition-all duration-300 shadow-lg shadow-blue-500/5"
+          >
+            VIEW ALL PRODUCTS
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-5">
@@ -44,13 +52,13 @@ const CategoryList = () => {
               <div className="w-16 h-16 mb-4 flex items-center justify-center text-4xl group-hover:scale-125 group-hover:rotate-12 transition-transform duration-500">
                 {cat.icon}
               </div>
-              <span className="text-xs font-black text-gray-300 group-hover:text-white uppercase tracking-wider">
+              <span className="text-xs font-black text-gray-300 group-hover:text-white uppercase tracking-wider transition-colors">
                 {cat.name}
               </span>
             </div>
             
             {/* Corner Accent */}
-            <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white/5 rounded-full blur-xl group-hover:bg-blue-500/20 transition-all"></div>
+            <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white/5 rounded-full blur-xl group-hover:bg-blue-500/20 transition-all duration-500"></div>
           </div>
         ))}
       </div>

@@ -23,6 +23,7 @@ import DoctorConsult from './pages/DoctorConsult';
 import LabTests from './pages/LabTests';
 import Footer from './components/Footer'; 
 import ScrollToTop from './components/ScrollToTop';
+import CategoryList from './components/CategoryList'; 
 
 function App() {
   return (
@@ -30,13 +31,14 @@ function App() {
       <BrowserRouter>
         <Toaster position="top-right" reverseOrder={false}/>
         <ScrollToTop />
-        <div className="flex flex-col min-h-screen font-sans">
+        <div className="flex flex-col min-h-screen font-sans bg-slate-950 text-white">
           <Navbar />
           
-          <main className="flex-grow bg-gray-50/30">
+          <main className="flex-grow">
             <Routes>
               {/* ✅ Public Routes (Everyone can see) */}
               <Route path="/" element={<Home />} />
+              <Route path="/categories" element={<CategoryList isFullPage={true}  />} />
               <Route path="/doctors" element={<DoctorConsult />} />
               <Route path="/labs" element={<LabTests />} />
               <Route path="/ambulance" element={<Ambulance />} />
