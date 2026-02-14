@@ -32,12 +32,12 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const loadUser = async () => {
       // 🔥 Fix: Agar cookie nahi hai toh request mat bhejo (Console saaf rahega)
-      const hasToken = document.cookie.split(';').some((item) => item.trim().startsWith('token='));
+      // const hasToken = document.cookie.split(';').some((item) => item.trim().startsWith('token='));
       
-      if (!hasToken) {
-        setLoading(false);
-        return;
-      }
+      // if (!hasToken) {
+      //   setLoading(false);
+      //   return;
+      // }
 
       try {
         const res = await API.get('/auth/me');
