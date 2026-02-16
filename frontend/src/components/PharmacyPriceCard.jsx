@@ -1,80 +1,95 @@
 import React from 'react';
-import { MapPin, Pill, ShieldCheck, ShoppingCart, Info, CheckCircle2, AlertCircle } from 'lucide-react';
+import { 
+  MapPin, Pill, ShieldCheck, ShoppingCart, 
+  Info, CheckCircle2, AlertCircle, ArrowRight 
+} from 'lucide-react';
 
 export default function PharmacyPriceCard({ option, isBest, onOrder }) {
   return (
-    <div className={`relative p-6 border-2 rounded-[2.5rem] flex flex-col md:flex-row justify-between items-center transition-all duration-300 ${
+    <div className={`relative p-6 md:p-8 border-2 rounded-[2.5rem] flex flex-col lg:flex-row justify-between items-center transition-all duration-500 group ${
       isBest 
-      ? 'bg-green-50/50 border-green-200 shadow-lg shadow-green-100' 
-      : 'bg-white border-slate-100 shadow-sm hover:shadow-md'
+      ? 'bg-emerald-500/5 border-emerald-500/20 shadow-2xl shadow-emerald-900/10' 
+      : 'bg-slate-900/40 border-slate-800 hover:border-slate-700 shadow-xl'
     }`}>
       
       {/* ⭐ Best Price Badge */}
       {isBest && (
-        <div className="absolute -top-3 left-8 bg-green-600 text-white text-[10px] font-black px-4 py-1 rounded-full uppercase tracking-tighter">
-          Best Price Match
+        <div className="absolute -top-4 left-10 bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-[9px] font-black px-5 py-1.5 rounded-full uppercase tracking-[0.2em] shadow-lg border border-emerald-400/30">
+          SABSE SASTA (Best Price)
         </div>
       )}
 
-      <div className="flex items-center gap-5 w-full md:w-auto">
-        {/* 💊 Icon Section */}
-        <div className={`p-4 rounded-[1.5rem] ${isBest ? 'bg-green-100 text-green-600' : 'bg-blue-50 text-blue-600'}`}>
-          <Pill className="w-8 h-8" />
+      <div className="flex items-center gap-6 w-full lg:w-auto">
+        {/* 💊 Icon */}
+        <div className={`hidden sm:flex p-5 rounded-[2rem] transition-transform duration-500 group-hover:scale-110 ${
+          isBest ? 'bg-emerald-500/20 text-emerald-400' : 'bg-blue-500/10 text-blue-400'
+        }`}>
+          <Pill size={32} />
         </div>
 
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <h4 className="font-black text-slate-800 text-lg uppercase tracking-tight">
+        <div className="space-y-3 flex-1">
+          <div className="flex flex-wrap items-center gap-3">
+            <h4 className="font-black text-white text-xl italic tracking-tighter uppercase">
               {option.pharmacy}
             </h4>
-            <ShieldCheck className="w-4 h-4 text-blue-500" />
+            <div className="flex items-center gap-1 bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded-md border border-blue-500/20">
+              <ShieldCheck size={12} />
+              <span className="text-[8px] font-black uppercase tracking-widest text-[10px]">Verified Store</span>
+            </div>
           </div>
           
-          {/* 🔥 Medicine & Salt Info */}
-          <div>
-            <p className="text-blue-600 font-black text-sm uppercase">
-              {option.medicineName}
+          <div className="space-y-1">
+            <p className="text-blue-400 font-black text-sm uppercase tracking-wider">
+              {option.medicineName || "Medicine Name"}
             </p>
-            <p className="text-[11px] font-bold text-slate-400 flex items-center gap-1 italic">
-              <Info className="w-3 h-3" /> Salt: {option.salt}
-            </p>
+            <div className="flex items-center gap-2 text-slate-500">
+              <Info size={14} className="text-slate-700" />
+              <p className="text-[10px] font-bold uppercase tracking-widest leading-none">
+                Salt: <span className="text-slate-300 italic">{option.salt || "Generic"}</span>
+              </p>
+            </div>
           </div>
 
-          {/* 📦 Stock Status */}
-          <div className="pt-1">
+          <div className="flex items-center gap-4">
             {option.stock > 0 ? (
-              <span className="inline-flex items-center gap-1 text-[10px] font-black text-green-700 bg-green-100 px-3 py-1 rounded-full uppercase">
-                <CheckCircle2 className="w-3 h-3" /> {option.stock} In Stock
+              <span className="flex items-center gap-1.5 text-[9px] font-black text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-xl uppercase border border-emerald-500/20">
+                <CheckCircle2 size={12} /> {option.stock} In Stock
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 text-[10px] font-black text-red-600 bg-red-100 px-3 py-1 rounded-full uppercase">
-                <AlertCircle className="w-3 h-3" /> Out of Stock
+              <span className="flex items-center gap-1.5 text-[9px] font-black text-red-400 bg-red-500/10 px-3 py-1.5 rounded-xl uppercase border border-red-500/20">
+                <AlertCircle size={12} /> Out of Stock
               </span>
             )}
+            <div className="flex items-center gap-1 text-[9px] font-black text-slate-500 uppercase">
+              <MapPin size={12} /> 1.5 KM
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 💰 Price & Action Section */}
-      <div className="flex items-center justify-between w-full md:w-auto mt-6 md:mt-0 gap-8 border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 md:pl-8">
-        <div className="text-left md:text-right">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pricing</p>
-          <p className="text-3xl font-black text-slate-900 tracking-tighter">
-            ₹{option.price}
-          </p>
+      {/* Pricing & Order */}
+      <div className="flex items-center justify-between w-full lg:w-auto mt-8 lg:mt-0 gap-10 border-t lg:border-t-0 lg:border-l border-slate-800/50 pt-6 lg:pt-0 lg:pl-10">
+        <div className="text-left lg:text-right">
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Final Price</p>
+          <div className="flex items-baseline gap-1">
+            <span className="text-slate-400 text-sm font-bold">₹</span>
+            <p className="text-4xl font-black text-white tracking-tighter">
+              {option.price}
+            </p>
+          </div>
         </div>
 
         {option.stock > 0 ? (
           <button
             onClick={() => onOrder(option)}
-            className="flex items-center gap-2 bg-blue-600 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-blue-700 hover:shadow-xl hover:shadow-blue-200 active:scale-95 transition-all"
+            className="flex items-center gap-3 bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-[1.5rem] font-black text-[11px] uppercase tracking-widest shadow-2xl shadow-blue-900/30 active:scale-95 transition-all"
           >
-            <ShoppingCart className="w-4 h-4" /> Order
+            <ShoppingCart size={16} /> Order
           </button>
         ) : (
           <button
             disabled
-            className="flex items-center gap-2 bg-slate-100 text-slate-400 px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest cursor-not-allowed border border-slate-200"
+            className="bg-slate-800 text-slate-600 px-8 py-4 rounded-[1.5rem] font-black text-[11px] uppercase cursor-not-allowed border border-slate-700/50"
           >
             N/A
           </button>

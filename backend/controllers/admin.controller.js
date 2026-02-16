@@ -4,33 +4,53 @@ const Order = require('../models/Order');
 
 exports.getAllPharmacies = async (req, res) => {
   try {
-    // 🚀 Parallel execution for speed
-    const [userCount, pharmacyCount, pharmacies, revenueData] = await Promise.all([
+    // 📊 Perfect Date Logic for IST
+    const now = new Date();
+    // Aaj se 7 din pehle ki date nikalna (IST safe)
+    const startDate = new Date();
+    startDate.setDate(now.getDate() - 7);
+    startDate.setHours(0, 0, 0, 0); 
+
+    const [userCount, pharmacyCount, pharmacies, revenueData, orderStats] = await Promise.all([
       User.countDocuments({ role: { $in: ['user', 'patient'] } }),
       Pharmacy.countDocuments(),
       Pharmacy.find().populate('owner', 'email phone').sort({ createdAt: -1 }),
-      // Database level par sum nikalna zyada fast hai
       Order.aggregate([
-        { $match: { status: 'Delivered' } },
+        { $match: { status: "Delivered" } },
         { $group: { _id: null, total: { $sum: "$price" } } }
       ]),
-      // Total orders count bina status filter ke
-    Order.countDocuments()
+      // 📈 Chart Aggregation (Live Updates based on IST)
+      Order.aggregate([
+        {
+          $match: {
+            status: "Delivered", 
+            createdAt: { $gte: startDate } 
+          }
+        },
+        {
+          $group: {
+            _id: { 
+              $dateToString: { 
+                format: "%Y-%m-%d", 
+                date: "$createdAt",
+                timezone: "+05:30" 
+              } 
+            },
+            orders: { $sum: 1 }
+          }
+        },
+        { $sort: { "_id": 1 } }
+      ])
     ]);
-
-    
-    
-
-    const totalRevenue = revenueData.length > 0 ? revenueData[0].total : 0;
 
     res.json({
       success: true,
       stats: {
         totalUsers: userCount,
         totalPharmacies: pharmacyCount,
-        totalRevenue: totalRevenue,
-        totalOrders: await Order.countDocuments({ status: 'Delivered' }),
-        pendingVerifications: pharmacies.filter(p => !p.isVerified).length
+        totalRevenue: revenueData.length > 0 ? revenueData[0].total : 0,
+        totalOrders: await Order.countDocuments({ status: "Delivered" }),
+        chartData: orderStats 
       },
       pharmacies
     });
@@ -42,12 +62,7 @@ exports.getAllPharmacies = async (req, res) => {
 exports.approvePharmacy = async (req, res) => {
   try {
     const { id } = req.params;
-    const pharmacy = await Pharmacy.findByIdAndUpdate(
-      id, 
-      { isVerified: true }, 
-      { new: true }
-    );
-    
+    const pharmacy = await Pharmacy.findByIdAndUpdate(id, { isVerified: true }, { new: true });
     if (!pharmacy) return res.status(404).json({ message: 'Pharmacy not found' });
     res.json({ success: true, message: 'Pharmacy approved successfully! 🎉' });
   } catch (err) {
@@ -58,10 +73,6 @@ exports.approvePharmacy = async (req, res) => {
 exports.deletePharmacy = async (req, res) => {
   try {
     const { id } = req.params;
-    // Basic safety: Verified pharmacy ko delete karne se pehle socho
-    const pharmacy = await Pharmacy.findById(id);
-    if (!pharmacy) return res.status(404).json({ success: false, message: 'Pharmacy nahi mili' });
-
     await Pharmacy.findByIdAndDelete(id);
     res.json({ success: true, message: 'Pharmacy record removed successfully' });
   } catch (err) {

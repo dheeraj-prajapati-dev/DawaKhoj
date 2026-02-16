@@ -5,7 +5,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Search, MapPin, Navigation, 
   ArrowUpDown, CheckCircle2, PackageX,
-  ChevronLeft, Filter, Loader2
+  ChevronLeft, Filter, Loader2, ShoppingBag, Zap, Sparkles
 } from 'lucide-react';
 
 const MedicineSearch = () => {
@@ -104,10 +104,14 @@ const MedicineSearch = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white p-4 md:p-8 font-sans overflow-x-hidden">
+    <div className="min-h-screen bg-slate-950 text-white p-4 md:p-8 font-sans relative overflow-hidden">
       <Toaster position="top-center" />
+      
+      {/* Background Glows */}
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-600/5 blur-[120px] rounded-full -z-10"></div>
+      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-indigo-600/5 blur-[120px] rounded-full -z-10"></div>
 
-      {/* 🚀 Modern Confirmation Modal */}
+      {/* 🚀 Order Confirmed Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center z-[100] p-6 animate-in fade-in zoom-in duration-300">
           <div className="bg-slate-900 border border-blue-500/30 rounded-[3rem] p-10 max-w-sm w-full text-center shadow-[0_0_50px_rgba(37,99,235,0.2)]">
@@ -128,121 +132,135 @@ const MedicineSearch = () => {
         </div>
       )}
 
-      {/* Header & Sticky Search Area */}
-      <header className="max-w-5xl mx-auto mb-8 flex flex-col items-center">
-        <div className="flex items-center justify-between w-full mb-8">
-            <button onClick={() => navigate('/')} className="p-3 bg-slate-900 rounded-2xl border border-slate-800 hover:bg-slate-800 transition-all">
-                <ChevronLeft className="w-5 h-5 text-slate-400" />
+      {/* Header Section */}
+      <header className="max-w-5xl mx-auto mb-12">
+        <div className="flex items-center justify-between w-full mb-10">
+            <button onClick={() => navigate('/')} className="p-4 bg-slate-900 rounded-2xl border border-slate-800 hover:border-slate-700 hover:bg-slate-800/80 transition-all group">
+                <ChevronLeft className="w-5 h-5 text-slate-400 group-hover:text-blue-500 transition-colors" />
             </button>
-            <h1 className="text-3xl font-black text-white italic tracking-tighter">DawaKhoj<span className="text-blue-500">+</span></h1>
-            <div className="w-10"></div> {/* Spacer */}
+            <div className="text-right">
+              <h1 className="text-4xl font-black text-white italic tracking-tighter uppercase leading-none">
+                Dawa<span className="text-blue-500">Khoj+</span>
+              </h1>
+              <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.3em] mt-2 italic">Hyper-Local Search Engine</p>
+            </div>
         </div>
 
-        {/* 🔍 Dynamic Search Bar */}
-        <div className="w-full sticky top-4 z-40 space-y-4 mb-6">
+        {/* 🔍 Search Input Area */}
+        <div className="w-full sticky top-4 z-40 space-y-6">
             <div className="relative group">
                 <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none">
-                    {loading ? <Loader2 className="w-5 h-5 text-blue-500 animate-spin" /> : <Search className="w-5 h-5 text-slate-500 group-focus-within:text-blue-500 transition-colors" />}
+                    {loading ? <Loader2 className="w-6 h-6 text-blue-500 animate-spin" /> : <Search className="w-6 h-6 text-slate-600 group-focus-within:text-blue-500 transition-colors" />}
                 </div>
                 <input 
-                    className="w-full bg-slate-900/60 backdrop-blur-2xl border border-slate-800 rounded-[2rem] pl-16 pr-8 py-5 text-lg font-bold outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/5 transition-all shadow-2xl placeholder:text-slate-600"
-                    placeholder={activeCategory ? `Search in ${activeCategory}...` : "Dawa ka naam likhein..."}
+                    className="w-full bg-slate-900/40 backdrop-blur-2xl border border-slate-800 rounded-[2.5rem] pl-16 pr-8 py-6 text-xl font-bold outline-none focus:border-blue-500/50 focus:ring-8 focus:ring-blue-500/5 transition-all shadow-2xl placeholder:text-slate-700"
+                    placeholder={activeCategory ? `Searching in ${activeCategory}...` : "Medicine ka naam likhein..."}
                     value={query} 
                     onChange={(e) => setQuery(e.target.value)} 
                 />
             </div>
 
             {/* Filter Chips */}
-            <div className="flex gap-3 overflow-x-auto no-scrollbar py-2">
-                <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl text-slate-500 mr-2">
+            <div className="flex gap-3 overflow-x-auto no-scrollbar py-2 px-2">
+                <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl text-slate-500">
                     <Filter className="w-3 h-3" />
                 </div>
                 {[
-                  { id: 'price-low', label: 'Cheapest', icon: '💰' }, 
-                  { id: 'distance', label: 'Nearest', icon: '📍' }, 
-                  { id: 'price-high', label: 'Premium', icon: '📈' }
+                  { id: 'price-low', label: 'Cheapest', icon: <Zap size={14} className="fill-current"/> }, 
+                  { id: 'distance', label: 'Nearest', icon: <MapPin size={14} /> }, 
+                  { id: 'price-high', label: 'Premium', icon: <Sparkles size={14} /> }
                 ].map((filter) => (
                     <button 
                         key={filter.id} 
                         onClick={() => setSortBy(filter.id)} 
-                        className={`whitespace-nowrap flex items-center gap-2 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${sortBy === filter.id ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40' : 'bg-slate-900 text-slate-400 border border-slate-800 hover:border-slate-700'}`}
+                        className={`whitespace-nowrap flex items-center gap-2 px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${sortBy === filter.id ? 'bg-blue-600 text-white shadow-xl shadow-blue-900/40' : 'bg-slate-900/50 text-slate-500 border border-slate-800 hover:border-slate-600'}`}
                     >
-                        <span>{filter.icon}</span> {filter.label}
+                        {filter.icon} {filter.label}
                     </button>
                 ))}
             </div>
         </div>
       </header>
 
-      {/* Search Results */}
-      <main className="max-w-5xl mx-auto space-y-12 pb-20">
+      {/* Results Main Section */}
+      <main className="max-w-5xl mx-auto space-y-16 pb-24">
         {sortedResults.length > 0 ? sortedResults.map((group, idx) => (
-          <div key={idx} className="animate-in slide-in-from-bottom-4 duration-500">
-            <div className="flex items-center gap-4 mb-8">
-              <span className="text-[10px] font-black text-blue-500 bg-blue-500/10 px-4 py-1.5 rounded-full uppercase tracking-[0.2em] border border-blue-500/20 shadow-sm">
-                BRAND: {group.brand}
+          <div key={idx} className="space-y-8 animate-in slide-in-from-bottom-6 duration-700">
+            <div className="flex items-center gap-4">
+              <span className="text-[10px] font-black text-blue-500 bg-blue-500/10 px-5 py-2 rounded-full uppercase tracking-[0.3em] border border-blue-500/20 shadow-sm flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
+                Brand: {group.brand}
               </span>
-              <div className="h-[1px] bg-slate-900 flex-1"></div>
+              <div className="h-[1px] bg-slate-800/50 flex-1"></div>
             </div>
 
             <div className="grid gap-6">
               {group.options.map((item, i) => (
-                <div key={i} className="group bg-slate-900/40 backdrop-blur-xl rounded-[2.5rem] border border-slate-800/60 hover:border-blue-500/30 hover:bg-slate-900 transition-all duration-500 flex flex-col md:flex-row justify-between items-stretch md:items-center p-8 gap-8 relative overflow-hidden">
+                <div key={i} className="group relative bg-slate-900/30 backdrop-blur-xl rounded-[3rem] border border-slate-800/60 hover:border-blue-500/40 hover:bg-slate-900/50 transition-all duration-500 flex flex-col md:flex-row justify-between items-center p-8 gap-8 overflow-hidden">
                   
-                  {/* Stock Indicator Light */}
-                  <div className={`absolute left-0 top-0 w-1 h-full ${item.stock > 0 ? 'bg-blue-500' : 'bg-slate-700'}`}></div>
+                  {/* Decorative Glow on Hover */}
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/5 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
 
-                  <div className="flex-1 space-y-4">
+                  {/* Left Side: Info */}
+                  <div className="flex-1 space-y-5 w-full">
                     <div>
-                        <h3 className="font-black text-4xl text-slate-100 italic uppercase tracking-tighter group-hover:text-white transition-colors">
+                        <h3 className="font-black text-4xl text-slate-100 italic uppercase tracking-tighter group-hover:text-blue-400 transition-colors duration-500">
                             {item.medicineName}
                         </h3>
-                        <div className="flex flex-wrap gap-4 mt-3">
-                            <span className="flex items-center gap-1.5 text-blue-400 text-[10px] font-black uppercase tracking-widest">
+                        <div className="flex flex-wrap items-center gap-4 mt-4">
+                            <span className="flex items-center gap-1.5 text-blue-500 text-[10px] font-black uppercase tracking-widest bg-blue-500/10 px-3 py-1.5 rounded-lg border border-blue-500/10">
                                 <CheckCircle2 className="w-3 h-3" /> {item.pharmacy}
                             </span>
                             <span className="flex items-center gap-1.5 text-slate-500 text-[10px] font-black uppercase tracking-widest">
                                 <Navigation className="w-3 h-3" /> { (typeof item.distance === 'number') ? `${item.distance.toFixed(1)} KM` : 'N/A' }
                             </span>
-                            <span className="bg-slate-950 px-2 py-1 rounded text-[9px] text-slate-600 font-bold uppercase border border-slate-800">
-                                {item.category}
-                            </span>
                         </div>
                     </div>
                     
-                    <div className="flex flex-wrap gap-3 pt-2">
+                    <div className="flex gap-3">
                       <button 
                         onClick={() => handleOrder(item)} 
                         disabled={item.stock === 0} 
-                        className={`px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 ${item.stock > 0 ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-xl shadow-blue-900/20 active:scale-95' : 'bg-slate-800 text-slate-600 cursor-not-allowed'}`}
+                        className={`flex-1 md:flex-none flex items-center justify-center gap-3 px-8 py-5 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] transition-all ${item.stock > 0 ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-2xl shadow-blue-900/30 active:scale-95' : 'bg-slate-800 text-slate-600 cursor-not-allowed border border-slate-700/50'}`}
                       >
-                        {item.stock > 0 ? (<><ArrowUpDown className="w-3 h-3" /> Order Now</>) : 'Out of Stock'}
+                        {item.stock > 0 ? (<><ShoppingBag className="w-4 h-4" /> Order Now</>) : 'Out of Stock'}
                       </button>
-                      <button onClick={() => getDirections(item.pharmacy)} className="bg-slate-950 text-slate-400 border border-slate-800 px-6 py-4 rounded-2xl text-[10px] font-black uppercase hover:text-white hover:border-slate-600 transition-all">
-                        Directions 🚩
+                      <button onClick={() => getDirections(item.pharmacy)} className="p-5 rounded-2xl bg-slate-800/50 border border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 transition-all" title="Get Directions">
+                        <Navigation size={18} />
                       </button>
                     </div>
                   </div>
 
-                  <div className="flex flex-col items-end justify-center border-t md:border-t-0 border-slate-800 pt-6 md:pt-0">
-                    <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1">Total Price</p>
+                  {/* Right Side: Pricing */}
+                  <div className="flex flex-col items-end justify-center w-full md:w-auto border-t md:border-t-0 md:border-l border-slate-800 pt-6 md:pt-0 md:pl-10">
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 italic">Best Price</p>
                     <div className="flex items-start gap-1">
-                        <span className="text-xl font-black text-emerald-500 mt-1">₹</span>
-                        <p className="text-6xl font-black text-white italic tracking-tighter">{item.price}</p>
+                        <span className="text-xl font-black text-blue-500 mt-1 italic">₹</span>
+                        <p className="text-7xl font-black text-white italic tracking-tighter leading-none">{item.price}</p>
                     </div>
                   </div>
+
+                  {/* Border Accent */}
+                  <div className={`absolute left-0 top-1/4 bottom-1/4 w-1 rounded-full ${item.stock > 0 ? 'bg-blue-500' : 'bg-slate-700'}`}></div>
                 </div>
               ))}
             </div>
           </div>
         )) : (query.length > 2 || activeCategory) && !loading && (
-          <div className="flex flex-col items-center justify-center mt-32 space-y-6">
-            <div className="w-24 h-24 bg-slate-900 rounded-[2.5rem] flex items-center justify-center border border-slate-800">
+          <div className="flex flex-col items-center justify-center mt-32 space-y-8 animate-in fade-in slide-in-from-top-4">
+            <div className="w-28 h-28 bg-slate-900/50 rounded-[3rem] flex items-center justify-center border border-slate-800 relative">
                 <PackageX className="w-12 h-12 text-slate-700" />
+                <div className="absolute inset-0 bg-blue-600/5 blur-2xl rounded-full"></div>
             </div>
             <div className="text-center">
-                <p className="text-slate-500 font-black text-xl uppercase tracking-tighter italic">Stock Not Available</p>
-                <button onClick={() => { setQuery(''); navigate('/search'); }} className="mt-4 text-blue-500 font-black text-[10px] uppercase tracking-widest border-b border-blue-500/30 hover:border-blue-500 transition-all">Reset All Filters</button>
+                <p className="text-slate-400 font-black text-2xl uppercase tracking-tighter italic">No Inventory Found</p>
+                <p className="text-slate-600 text-xs font-bold uppercase tracking-widest mt-2">Try a different name or category</p>
+                <button 
+                  onClick={() => { setQuery(''); navigate('/search'); }} 
+                  className="mt-8 text-blue-500 font-black text-[10px] uppercase tracking-[0.2em] border-b-2 border-blue-500/20 hover:border-blue-500 transition-all pb-1"
+                >
+                  Reset Search Results
+                </button>
             </div>
           </div>
         )}
