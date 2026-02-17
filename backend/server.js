@@ -12,10 +12,8 @@ connectDB();
 const app = express();
 const server = http.createServer(app); 
 
-// 🛡️ Proxy trust zaruri hai cookies ke liye
 app.set('trust proxy', 1);
 
-// ====== 1. CONFIG (Allowed Origins) ======
 const allowedOrigins = [
   "https://dawakhoj.in", 
   "https://www.dawakhoj.in", 
@@ -23,27 +21,23 @@ const allowedOrigins = [
   "http://localhost:5173" 
 ];
 
-// ====== 2. MIDDLEWARES ======
-
 app.use(cors({
   origin: function (origin, callback) {
-    // Agar origin list mein hai ya fir koi origin nahi (jaise Postman/Mobile app) toh allow karein
     if (!origin || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
       callback(new Error('CORS block by DawaKhoj Security'));
     }
   },
-  credentials: true, // 🔥 Iske bina cookies transfer nahi hongi
+  credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"]
 }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser()); // 🔥 Routes se hamesha upar hona chahiye
+app.use(cookieParser());
 
-// ====== 3. SOCKET SETUP ======
 const io = new Server(server, {
   cors: { 
     origin: allowedOrigins, 
@@ -69,7 +63,9 @@ app.use('/api/prescription', require('./routes/prescription.routes'));
 app.use('/api/flow', require('./routes/flow.routes'));
 app.use('/api/admin', require('./routes/admin.routes'));
 
-// Health Check
+// 🔥 YE LINE ADD KI HAI (Medicine Route)
+app.use('/api/medicines', require('./routes/medicine.routes'));
+
 app.get('/', (req, res) => res.send('DawaKhoj API is Running... 🚀'));
 
 const PORT = process.env.PORT || 5000;

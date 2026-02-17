@@ -13,21 +13,34 @@ const getVerifiedPharmacy = async (userId) => {
 };
 
 // ➕ ADD / UPDATE SINGLE ITEM
+const NEW_PLACEHOLDER = 'https://placehold.co/300x300/1e293b/475569?text=Medicine';
+
 exports.addOrUpdateInventory = async (req, res) => {
     try {
         const pharmacy = await getVerifiedPharmacy(req.user._id);
-        const { medicineName, salt, category, price, stock, brand } = req.body;
+        const { medicineName, salt, category, price, stock, brand, image } = req.body;
 
-        // Smart Find/Create Medicine
-        let medicine = await Medicine.findOne({ name: new RegExp(`^${medicineName}$`, 'i') });
+        let medicine = await Medicine.findOne({ name: new RegExp(`^${medicineName.trim()}$`, 'i') });
 
         if (!medicine) {
             medicine = await Medicine.create({ 
-                name: medicineName, 
+                name: medicineName.trim(), 
                 salt: salt || "N/A", 
-                category, 
-                brand 
+                category: category || "OTC", 
+                brand: brand || "",
+                // Use new placeholder if no image provided
+                image: image || NEW_PLACEHOLDER
             });
+        } else {
+            // Agar purana broken image link hai ya blank hai, toh update karein
+            if (image) {
+                medicine.image = image;
+            } else if (!medicine.image || medicine.image.includes('via.placeholder')) {
+                medicine.image = NEW_PLACEHOLDER;
+            }
+            
+            if (category) medicine.category = category;
+            await medicine.save();
         }
 
         const inventory = await Inventory.findOneAndUpdate(
@@ -58,7 +71,7 @@ exports.getMyInventory = async (req, res) => {
     }
 };
 
-// 🚀 BULK UPLOAD (CSV Parser)
+// 🚀 BULK UPLOAD (CSV Parser - Support for Image & Category)
 exports.bulkUploadInventory = async (req, res) => {
     try {
         const pharmacy = await getVerifiedPharmacy(req.user._id);
@@ -70,15 +83,22 @@ exports.bulkUploadInventory = async (req, res) => {
             .on('end', async () => {
                 try {
                     for (const item of results) {
-                        // 1. Medicine ensure karein
-                        let medicine = await Medicine.findOne({ name: new RegExp(`^${item.name}$`, 'i') });
+                        // 1. Medicine ensure karein (with image and category from CSV)
+                        let medicine = await Medicine.findOne({ name: new RegExp(`^${item.name.trim()}$`, 'i') });
+                        
                         if (!medicine) {
                             medicine = await Medicine.create({
-                                name: item.name,
-                                brand: item.brand,
+                                name: item.name.trim(),
+                                brand: item.brand || "",
                                 salt: item.salt || "N/A",
-                                category: item.category || "OTC"
+                                category: item.category || "OTC",
+                                image: item.image || 'https://via.placeholder.com/300?text=Medicine'
                             });
+                        } else {
+                            // Bulk mein bhi photo update kar sakte hain
+                            if (item.image) medicine.image = item.image;
+                            if (item.category) medicine.category = item.category;
+                            await medicine.save();
                         }
 
                         // 2. Inventory entry karein
@@ -91,40 +111,52 @@ exports.bulkUploadInventory = async (req, res) => {
                             { upsert: true }
                         );
                     }
-                    fs.unlinkSync(req.file.path); // Temp file delete
-                    res.json({ success: true, message: `${results.length} items processed!` });
+                    fs.unlinkSync(req.file.path); 
+                    res.json({ success: true, message: `${results.length} items processed successfully!` });
                 } catch (dbErr) {
+                    if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
                     res.status(500).json({ message: "DB Error during bulk upload", error: dbErr.message });
                 }
             });
     } catch (err) {
+        if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
         res.status(err.status || 500).json({ message: err.message });
     }
 };
 
-// ✏️ UPDATE & ❌ DELETE (Stayed Same but with Ownership Check)
+// ✏️ UPDATE ITEM
 exports.updateInventory = async (req, res) => {
     try {
         const pharmacy = await getVerifiedPharmacy(req.user._id);
+        const { price, stock, image } = req.body;
+
         const inventory = await Inventory.findOneAndUpdate(
             { _id: req.params.id, pharmacy: pharmacy._id },
-            { price: Number(req.body.price), stock: Number(req.body.stock) },
+            { price: Number(price), stock: Number(stock) },
             { new: true }
-        );
+        ).populate('medicine');
+
         if (!inventory) return res.status(404).json({ message: 'Unauthorized or not found' });
+
+        // Agar edit modal se image URL change kiya hai
+        if (image && inventory.medicine) {
+            await Medicine.findByIdAndUpdate(inventory.medicine._id, { image });
+        }
+
         res.json({ success: true, inventory });
     } catch (err) {
         res.status(err.status || 500).json({ message: err.message });
     }
 };
 
+// ❌ DELETE ITEM
 exports.deleteInventory = async (req, res) => {
     try {
         const pharmacy = await getVerifiedPharmacy(req.user._id);
         const inventory = await Inventory.findOneAndDelete({ _id: req.params.id, pharmacy: pharmacy._id });
         if (!inventory) return res.status(404).json({ message: 'Not found' });
-        res.json({ success: true, message: "Deleted" });
+        res.json({ success: true, message: "Deleted from your inventory" });
     } catch (err) {
         res.status(err.status || 500).json({ message: err.message });
     }
-};
+}; 
