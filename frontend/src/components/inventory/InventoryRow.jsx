@@ -1,107 +1,126 @@
-import { useState } from 'react';
-import EditMedicineModal from './EditMedicineModal';
+import { useState, useEffect } from 'react';
 import { API } from '../../context/AuthContext';
 import { toast } from 'react-hot-toast';
-import { Edit2, Trash2, AlertTriangle, CheckCircle, ShieldOff } from 'lucide-react';
+import { 
+  X, Save, Beaker, Package, 
+  IndianRupee, Tag, ClipboardList, Loader2, Image as ImageIcon 
+} from 'lucide-react';
 
-export default function InventoryRow({ item, refresh, isVerified }) {
-  const [showEdit, setShowEdit] = useState(false);
+export default function EditMedicineModal({ item, onClose, refresh }) {
+  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({
+    price: item.price || '',
+    stock: item.stock || '',
+    image: item.medicine?.image || '', // Existing image link
+    category: item.medicine?.category || 'OTC'
+  });
 
-  const handleDelete = async () => {
-    if (!isVerified) return;
+  const categories = ['Prescription', 'OTC', 'Devices', 'Baby Care', 'Personal Care', 'Supplements', 'Ayurvedic', 'First Aid'];
 
-    if (window.confirm(`Permanently delete ${item.medicine?.name} from local node?`)) {
-      try {
-        await API.delete(`/inventory/delete/${item._id}`);
-        toast.success("Entry Purged! 🗑️", {
-          style: { background: '#0f172a', color: '#fff', border: '1px solid #ef4444' }
-        });
-        refresh();
-      } catch (error) {
-        toast.error("Deletion Protocol Failed");
-      }
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      // Backend ko update request bhej rahe hain
+      await API.put(`/inventory/update/${item._id}`, {
+        price: Number(form.price),
+        stock: Number(form.stock),
+        image: form.image.trim(), // Updating image URL
+        category: form.category
+      });
+
+      toast.success('Asset Calibrated! ⚡', {
+        style: { background: '#0f172a', color: '#fff', border: '1px solid #3b82f6' }
+      });
+      refresh();
+      onClose();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Update failed');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <>
-      <tr className="border-b border-slate-800/50 hover:bg-slate-900/40 transition-all group">
-        {/* Medicine Identity */}
-        <td className="px-6 py-5">
-          <div className="flex flex-col">
-            <span className="font-black text-slate-100 uppercase italic tracking-tighter text-base group-hover:text-blue-400 transition-colors">
-              {item.medicine?.name || "Unknown Asset"}
-            </span>
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">
-              {item.medicine?.salt || "No Salt Data"}
-            </span>
+    <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-xl flex justify-center items-center z-[110] p-4">
+      <div className="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-[3rem] shadow-2xl overflow-hidden relative animate-in zoom-in duration-200">
+        <div className="p-8 md:p-10">
+          <div className="flex justify-between items-start mb-8">
+            <div>
+              <h3 className="text-2xl font-black italic tracking-tighter text-white uppercase flex items-center gap-3">
+                <Save className="text-blue-500" size={24} /> Edit <span className="text-blue-500">Asset</span>
+              </h3>
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">
+                Modifying: {item.medicine?.name}
+              </p>
+            </div>
+            <button onClick={onClose} className="p-2 bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-500 rounded-xl transition-all">
+              <X size={20} />
+            </button>
           </div>
-        </td>
 
-        {/* Pricing Node */}
-        <td className="px-6 py-5">
-          <div className="flex items-center gap-1">
-            <span className="text-xs font-black text-emerald-500/50">₹</span>
-            <span className="font-black text-emerald-400 text-lg tracking-tighter">
-              {item.price}
-            </span>
-          </div>
-        </td>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Image URL Field */}
+            <div className="relative group">
+              <ImageIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-blue-500" size={18} />
+              <input 
+                className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl pl-12 pr-4 py-4 text-white font-bold outline-none focus:border-blue-500 transition-all text-sm" 
+                name="image" 
+                value={form.image}
+                placeholder="UPDATE IMAGE URL" 
+                onChange={handleChange} 
+              />
+            </div>
 
-        {/* Stock Level with Conditional Glowing Pulse */}
-        <td className="px-6 py-5">
-          <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border ${
-            item.stock < 10 
-              ? 'bg-red-500/10 border-red-500/20 text-red-500' 
-              : 'bg-blue-500/10 border-blue-500/20 text-blue-400'
-          }`}>
-            <div className={`w-1.5 h-1.5 rounded-full ${
-              item.stock < 10 ? 'bg-red-500 animate-pulse' : 'bg-blue-500'
-            }`} />
-            <span className="text-[10px] font-black uppercase tracking-widest">
-              {item.stock < 10 ? 'Low Stock:' : 'Available:'} {item.stock} Units
-            </span>
-          </div>
-        </td>
+            <div className="relative group">
+              <Tag className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-blue-500" size={18} />
+              <select 
+                className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl pl-12 pr-4 py-4 text-white font-bold outline-none focus:border-blue-500 transition-all text-sm appearance-none" 
+                name="category" 
+                value={form.category}
+                onChange={handleChange}
+              >
+                {categories.map(cat => <option key={cat} value={cat} className="bg-slate-900">{cat.toUpperCase()}</option>)}
+              </select>
+            </div>
 
-        {/* Action Protocols */}
-        <td className="px-6 py-5 text-right">
-          <div className="flex items-center justify-end gap-3 opacity-40 group-hover:opacity-100 transition-opacity">
-            {isVerified ? (
-              <>
-                <button
-                  onClick={() => setShowEdit(true)}
-                  className="p-2.5 bg-slate-800 hover:bg-blue-600 text-slate-300 hover:text-white rounded-xl transition-all shadow-lg"
-                  title="Modify Entry"
-                >
-                  <Edit2 size={16} />
-                </button>
-                <button
-                  onClick={handleDelete}
-                  className="p-2.5 bg-slate-800 hover:bg-red-600 text-slate-300 hover:text-white rounded-xl transition-all shadow-lg"
-                  title="Delete Entry"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </>
-            ) : (
-              <div className="flex items-center gap-2 text-slate-600 bg-slate-900/50 px-3 py-1.5 rounded-lg border border-slate-800">
-                <ShieldOff size={14} />
-                <span className="text-[8px] font-black uppercase tracking-tighter">Read Only</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="relative group">
+                <IndianRupee className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-emerald-500" size={18} />
+                <input 
+                  className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl pl-12 pr-4 py-4 text-emerald-400 font-bold outline-none focus:border-emerald-500 transition-all text-sm" 
+                  name="price" 
+                  type="number" 
+                  value={form.price}
+                  placeholder="PRICE" 
+                  onChange={handleChange} 
+                  required 
+                />
               </div>
-            )}
-          </div>
-        </td>
-      </tr>
+              <div className="relative group">
+                <Package className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-orange-500" size={18} />
+                <input 
+                  className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl pl-12 pr-4 py-4 text-orange-400 font-bold outline-none focus:border-orange-500 transition-all text-sm" 
+                  name="stock" 
+                  type="number" 
+                  value={form.stock}
+                  placeholder="STOCK" 
+                  onChange={handleChange} 
+                  required 
+                />
+              </div>
+            </div>
 
-      {/* Edit Modal Logic */}
-      {showEdit && isVerified && (
-        <EditMedicineModal
-          item={item}
-          onClose={() => setShowEdit(false)}
-          refresh={refresh}
-        />
-      )}
-    </>
+            <button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-2xl shadow-xl transition-all uppercase tracking-widest text-[10px] flex items-center justify-center gap-2">
+              {loading ? <Loader2 className="animate-spin" /> : 'Apply Calibration'}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
   );
 }
