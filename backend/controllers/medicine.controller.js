@@ -5,7 +5,7 @@ exports.getMedicineById = async (req, res) => {
     try {
         const { id } = req.params;
         if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({ success: false, message: "Invalid Product ID" });
+            return res.status(400).json({ success: false, message: "Invalid ID Format" });
         }
 
         const medicine = await Medicine.aggregate([
@@ -30,9 +30,7 @@ exports.getMedicineById = async (req, res) => {
             return res.status(404).json({ success: false, message: "Asset not found" });
         }
 
-        // Send back with clean string ID
-        const result = { ...medicine[0], _id: medicine[0]._id.toString() };
-        res.json({ success: true, medicine: result });
+        res.json({ success: true, medicine: medicine[0] });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
@@ -41,6 +39,8 @@ exports.getMedicineById = async (req, res) => {
 exports.getProductsByCategory = async (req, res) => {
     try {
         const { category } = req.query;
+        if (!category) return res.status(400).json({ success: false, message: "Category required" });
+
         const products = await Medicine.aggregate([
             { $match: { category: { $regex: new RegExp(`^${category}$`, 'i') } } },
             {
@@ -53,12 +53,11 @@ exports.getProductsByCategory = async (req, res) => {
             },
             {
                 $project: {
-                    _id: { $toString: "$_id" }, 
+                    _id: 1, // Keep as ObjectId for frontend .toString()
                     name: 1,
                     brand: 1,
                     image: 1,
                     category: 1,
-                    salt: 1,
                     price: { $ifNull: [{ $min: "$inventory_data.price" }, 0] },
                     stock: { $ifNull: [{ $sum: "$inventory_data.stock" }, 0] }
                 }
