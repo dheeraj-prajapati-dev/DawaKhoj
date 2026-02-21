@@ -5,23 +5,22 @@ const {
   loginUser, 
   getMe, 
   updateProfile,
-  logoutUser // 🔥 Logout bhi add kar diya hai
+  logoutUser,
+  forgotPassword, // 🔥 New
+  resetPassword  // 🔥 New
 } = require('../controllers/auth.controller');
 
 const { protect } = require('../middlewares/authMiddleware');
 const { validate, registerSchema, loginSchema } = require('../middlewares/validators');
 
 // ✅ Public Routes
-// Register se pehle Zod validation chalega
 router.post('/register', validate(registerSchema), registerUser);
-
-// Login se pehle Zod validation chalega
 router.post('/login', validate(loginSchema), loginUser);
-
-// Logout (Cookie clear karne ke liye)
 router.post('/logout', logoutUser);
+router.post('/forgot-password', forgotPassword); // 🔥 New
+router.put('/reset-password/:token', resetPassword); // 🔥 New
 
-// 🔐 Private Routes (Login Zaroori Hai)
+// 🔐 Private Routes
 router.get('/me', protect, getMe);
 router.put('/update-profile', protect, updateProfile);
 

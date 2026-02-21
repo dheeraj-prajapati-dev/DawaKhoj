@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom'; 
 import { toast, Toaster } from 'react-hot-toast';
 import { useAuth, API } from '../context/AuthContext';
-import { Eye, EyeOff, Loader2, Lock, Mail, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Lock, Mail, ShieldCheck, KeyRound } from 'lucide-react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -48,13 +48,11 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-slate-950 p-6 font-sans text-white relative overflow-hidden">
       <Toaster position="top-center" />
       
-      {/* 🌌 Animated Background Elements */}
       <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-blue-600/10 blur-[150px] rounded-full animate-pulse"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-emerald-600/5 blur-[150px] rounded-full"></div>
 
       <div className="bg-slate-900/40 backdrop-blur-2xl p-8 md:p-12 rounded-[3.5rem] shadow-2xl w-full max-w-md border border-slate-800/60 relative group">
         
-        {/* Floating Icon Decoration */}
         <div className="absolute -top-10 left-1/2 -translate-x-1/2">
            <div className="w-20 h-20 bg-slate-950 rounded-[2rem] border-2 border-slate-800 flex items-center justify-center shadow-2xl group-hover:border-blue-500/50 transition-all duration-500">
               <ShieldCheck className="w-10 h-10 text-blue-500" />
@@ -71,7 +69,6 @@ export default function Login() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Email Field */}
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Credentials ID</label>
             <div className="relative group/input">
@@ -87,9 +84,13 @@ export default function Login() {
             </div>
           </div>
 
-          {/* Password Field */}
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Access Key</label>
+            <div className="flex justify-between items-center px-4">
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Access Key</label>
+              <Link to="/forgot-password" size={14} className="text-[9px] font-black text-blue-500/60 hover:text-blue-500 transition-colors flex items-center gap-1 uppercase tracking-widest">
+                <KeyRound size={10} /> Recovery
+              </Link>
+            </div>
             <div className="relative group/input">
               <Lock className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-600 group-focus-within/input:text-blue-500 transition-colors" />
               <input
@@ -126,7 +127,7 @@ export default function Login() {
         <div className="mt-12 flex flex-col items-center gap-4">
             <p className="text-[10px] text-slate-600 font-bold uppercase tracking-widest">
               Don't have an account? 
-              <Link to="/register" className="text-blue-500 font-black ml-2 hover:underline decoration-2 underline-offset-4">
+              <Link to="/register" className="text-blue-500 font-black ml-2 hover:underline decoration-2 underline-offset-4 decoration-blue-500/30">
                 Join Platform
               </Link>
             </p>

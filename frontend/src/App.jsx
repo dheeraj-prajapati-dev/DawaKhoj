@@ -6,6 +6,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 
 // Pages Import
 import Login from './pages/Login';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Register from './pages/Register';
 import PharmacyRegister from './pages/PharmacyRegister';
 import PharmacyInventory from './pages/PharmacyInventory';
@@ -31,43 +33,60 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Toaster position="top-right" reverseOrder={false}/>
+        <Toaster 
+          position="top-right" 
+          toastOptions={{
+            duration: 4000,
+            style: {
+              background: '#0f172a',
+              color: '#fff',
+              border: '1px solid #1e293b',
+              fontSize: '12px',
+              fontWeight: 'bold',
+              textTransform: 'uppercase'
+            },
+          }}
+        />
         <ScrollToTop />
-        <div className="flex flex-col min-h-screen font-sans bg-slate-950 text-white selection:bg-blue-500 selection:text-white">
+        <div className="flex flex-col min-h-screen font-sans bg-slate-950 text-white selection:bg-blue-600 selection:text-white">
           <Navbar />
           
           <main className="flex-grow">
             <Routes>
-              {/* ✅ Public Discovery Routes */}
+              {/* --- Public & Discovery --- */}
               <Route path="/" element={<Home />} />
               <Route path="/categories" element={<CategoryList isFullPage={true} />} />
               <Route path="/category-products" element={<CategoryProducts />} /> 
-              <Route path="/product/:id" element={<ProductDetails />} /> {/* 🔥 ID Based Dynamic Route */}
+              <Route path="/product/:id" element={<ProductDetails />} />
               
-              {/* ✅ Services */}
+              {/* --- Healthcare Services --- */}
               <Route path="/doctors" element={<DoctorConsult />} />
               <Route path="/labs" element={<LabTests />} />
               <Route path="/ambulance" element={<Ambulance />} />
               
-              {/* ✅ Authentication */}
+              {/* --- User Authentication --- */}
               <Route path="/login" element={<Login />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+
+              <Route path="/reset-password/:token" element={<ResetPassword />} />
+
               <Route path="/register" element={<Register />} /> 
               
-              {/* 🔐 User Protected Area */}
+              {/* --- Secured User Account Area --- */}
               <Route path="/search" element={<MedicineSearch />} />
+              <Route path="/results" element={<Results />} />
               <Route path="/my-orders" element={<ProtectedRoute><MyOrders /></ProtectedRoute>} />
               <Route path="/upload" element={<ProtectedRoute><UploadPrescription /></ProtectedRoute>} />
-              <Route path="/results" element={<Results />} />
               <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
               
-              {/* 🚫 Admin Control Panel */}
+              {/* --- Administrative Control --- */}
               <Route path="/admin/dashboard" element={
                 <ProtectedRoute allowedRoles={['admin']}>
                   <AdminDashboard />
                 </ProtectedRoute>
               } />
               
-              {/* 🏥 Pharmacy Operation Node */}
+              {/* --- Pharmacy Partner Network --- */}
               <Route path="/pharmacy/register" element={<ProtectedRoute><PharmacyRegister /></ProtectedRoute>} />
               <Route path="/pharmacy/dashboard" element={
                 <ProtectedRoute allowedRoles={['pharmacy']}>
@@ -84,7 +103,6 @@ function App() {
                   <PharmacyOrders />
                 </ProtectedRoute>
               } />
-              
             </Routes>
           </main>
 
